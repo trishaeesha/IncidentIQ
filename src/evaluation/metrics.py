@@ -141,8 +141,7 @@ def confidence_error(
 ) -> Optional[float]:
     if confidence is None or correct is None:
         return None
-    # Round to avoid binary floating-point artifacts in deterministic reports.
-    return round(abs(confidence / 100.0 - float(correct)), 10)
+    # Round to avoid binary floating-point artifacts in deterministic reports.\n    return round(abs(confidence / 100.0 - float(correct)), 10)
 
 
 def summarize(values: Iterable[Optional[float]]) -> dict[str, Optional[float]]:
