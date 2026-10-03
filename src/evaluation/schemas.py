@@ -113,8 +113,10 @@ class EvaluationResult:
     incorrect_action_count: int
     verification_time_s: Optional[float]
     confidence: Optional[float]
+    confidence_error: Optional[float]
     ai_following_rate: Optional[float]
     ai_override_rate: Optional[float]
     incorrect_ai_following_count: int
     correct_ai_override_count: int
     correct_ai_following_count: int
+    workload_score: Optional[float]
