@@ -24,7 +24,7 @@ def main():
  pairs=[]
  for h in hyp.get("hypotheses",[])[:3]:
   for e in h.get("supporting_evidence",[])[:5]:
-   pairs.append((e.get("observation",""),h["hypothesis"]))
+   pairs.append((e.get("observation",""), f"The incident is explained by {h["hypothesis"]} in service {h.get("primary_service") or "the affected service"}."))
   for e in h.get("contradicting_evidence",[])[:3]:
    pairs.append((e.get("observation",""),h["hypothesis"]))
  nli=NLIEvidenceInterpreter().classify_many(pairs)
