@@ -28,3 +28,29 @@ def test_rcaeval_trace_uses_epoch_start_time(tmp_path):
     assert records
     assert any(r["signal"] == "span_count" for r in records)
     assert any(r["signal"] == "error_status" for r in records)
+
+
+from src.models.hypothesis_engine import HypothesisEngine
+
+
+def test_neutral_evidence_does_not_overpower_strong_signal():
+    engine = HypothesisEngine()
+    evidence = [
+        {
+            "source": "metrics", "service": "checkoutservice",
+            "observation": "checkoutservice_cpu increased after injection",
+            "direction": "increase", "evidence_strength": "strong",
+            "availability": "available",
+        }
+    ] + [
+        {
+            "source": "traces", "service": "other",
+            "observation": f"trace observation {i}",
+            "direction": "increase", "evidence_strength": "weak",
+            "availability": "available",
+        }
+        for i in range(20)
+    ]
+    result = engine.infer(evidence)
+    resource = next(h for h in result["hypotheses"] if h["hypothesis"] == "resource saturation")
+    assert resource["confidence"] >= 0.8
