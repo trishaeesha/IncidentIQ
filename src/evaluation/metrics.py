@@ -115,24 +115,24 @@ def evaluate_trial(
     follow, override, bad_follow, good_override, good_follow = _ai_metrics(
         trial, truth
     )
+    correct = diagnosis_correct(trial.final_diagnosis, truth)
     return EvaluationResult(
         trial_id=trial.trial_id,
-        diagnosis_correct=diagnosis_correct(trial.final_diagnosis, truth),
+        diagnosis_correct=correct,
         time_to_correct_hypothesis_s=time_to_correct_hypothesis(trial, truth),
         time_to_correct_action_s=time_to_correct_action(trial, truth),
         unnecessary_action_count=unnecessary,
         incorrect_action_count=incorrect,
         verification_time_s=verification_time(trial),
         confidence=trial.confidence,
-        confidence_error=confidence_error(
-            trial.confidence, diagnosis_correct(trial.final_diagnosis, truth)
-        ),
+        confidence_error=confidence_error(trial.confidence, correct),
         ai_following_rate=follow,
         ai_override_rate=override,
         incorrect_ai_following_count=bad_follow,
         correct_ai_override_count=good_override,
         correct_ai_following_count=good_follow,
         workload_score=trial.workload_score,
+        condition=truth.condition,
     )
 
 
