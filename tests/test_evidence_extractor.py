@@ -131,10 +131,9 @@ def test_leakage_guard_source_does_not_accept_or_reference_fault_fields():
     from src.evidence import extractor
 
     params = inspect.signature(extractor.extract_evidence).parameters
-    assert "root_cause_service" not in params
-    assert "fault" not in params
-    assert "fault_description" not in params
+    for field in ("root_cause_service", "fault", "fault_description"):
+        assert field not in params
 
     source = inspect.getsource(extractor.extract_evidence)
-    assert "root_cause_service" not in source
-    assert "fault_description" not in source
+    for field in ("root_cause_service", "fault", "fault_description"):
+        assert field not in source
