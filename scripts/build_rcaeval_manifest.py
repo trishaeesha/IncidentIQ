@@ -135,7 +135,7 @@ def main() -> None:
     print(f"Locally available: {int(manifest['available'].sum())}")
     print(f"Candidate pool: {len(candidates)}")
     print(f"Systems: {manifest['system'].nunique()}")
-    print(f"Fault types: {manifest['fault'].nunique()}")
+    print(f"Fault types: {manifest['_fault'].nunique()}")
     print("Gray-area conditions remain UNVALIDATED by design.")
     print(f"Manifest: {output_dir / 'rcaeval_re2_manifest.csv'}")
     print(f"Candidates: {output_dir / 'rcaeval_re2_candidate_pool.csv'}")
