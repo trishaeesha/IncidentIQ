@@ -63,7 +63,6 @@ def build_local_manifest(
                 "case": case_id,
                 "dataset": row.get("dataset"),
                 "system": row.get("system_name"),
-                "fault": row.get("fault"),
                 "repetition": row.get("repetition"),
                 "has_logs": paths["logs"].exists(),
                 "has_traces": paths["traces"].exists(),
