@@ -1,0 +1,16 @@
+# Copy this file to configs/local.yaml for local development.
+# local.yaml is ignored by Git.
+
+dataset:
+  metadata_path: C:/path/to/RCAEval_ALL_735.json
+  data_root: C:/path/to/RCAEval_gray_candidates
+
+runtime:
+  random_seed: 42
+
+model:
+  provider: local_or_configured
+  model_name: replace_with_local_or_configured_model
+
+prototype:
+  max_cases_per_run: 5
