@@ -1,0 +1,50 @@
+name: IncidentIQ Deployment Smoke Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "research/final-integration"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Start API
+        run: |
+          python app.py &
+          echo $! > app.pid
+          sleep 2
+      - name: Health check
+        run: |
+          python - <<'PY'
+          import json, urllib.request
+          r=json.load(urllib.request.urlopen("http://127.0.0.1:8080/health"))
+          assert r["status"]=="ok"
+          PY
+      - name: Decision endpoint check
+        run: |
+          python - <<'PY'
+          import json, urllib.request
+          payload=json.dumps({"evidence":[
+            {"case_id":"smoke","source":"metrics","service":"checkoutservice",
+             "observation":"checkoutservice_cpu increased after injection",
+             "direction":"increase","evidence_strength":"strong",
+             "availability":"available"}
+          ]}).encode()
+          req=urllib.request.Request("http://127.0.0.1:8080/analyze",data=payload,headers={"Content-Type":"application/json"})
+          out=json.load(urllib.request.urlopen(req))
+          assert "hypotheses" in out and "decision" in out
+          assert out["decision"]["human_control_required"] is True
+          PY
+      - name: Build container
+        run: docker build -t incidentiq:ci .
+      - name: Stop API
+        if: always()
+        run: kill $(cat app.pid) 2>/dev/null || true
