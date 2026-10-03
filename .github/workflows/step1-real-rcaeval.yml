@@ -26,6 +26,9 @@ jobs:
           - re2tt_ts-route-service_socket_1
           - re2tt_ts-order-service_mem_1
     steps:
+      - name: Validate evaluation framework
+        run: python experiments/self_test.py
+
       - name: Checkout
         uses: actions/checkout@v4
 
