@@ -37,6 +37,9 @@ jobs:
       - name: Install project dependencies
         run: pip install -r requirements.txt
 
+      - name: Run regression tests
+        run: pytest -q tests/test_contextual_relation.py
+
       - name: Validate evaluation framework
         run: python experiments/self_test.py
 
