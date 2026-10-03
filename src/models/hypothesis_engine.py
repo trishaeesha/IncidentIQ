@@ -702,15 +702,10 @@ class HypothesisEngine:
             missing
         )
 
-        neutral_penalty = 0.05 * len(
-            neutral
-        )
-
         score = (
             support_score
             - contradiction_penalty
             - missing_penalty
-            - neutral_penalty
         )
 
         return round(
