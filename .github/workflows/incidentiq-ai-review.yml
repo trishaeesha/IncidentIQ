@@ -41,7 +41,37 @@ jobs:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           permission-profile: ":read-only"
           safety-strategy: "drop-sudo"
-          prompt-file: .github/incidentiq-review-prompt.md
+          prompt: |
+            Read RESEARCH_CONTRACT.md first. You are the automated research/code reviewer for IncidentIQ.
+            
+            Review the current repository state and the changes introduced by the current push or pull request.
+            
+            IncidentIQ studies when evidence-grounded AI assistance improves or degrades human engineers' diagnostic decision-making during software incident troubleshooting.
+            
+            Do not silently redesign the research question, three experimental modes, six incident conditions, RCAEval RE2 as the primary controlled incident source, or the core evidence-grounded decision-support architecture. If a change seems necessary, flag it for the project owner.
+            
+            Review: change scope; code correctness; schema/interface consistency; tests; root-cause/fault leakage; train/test contamination; unsupported causal claims; gray-area labeling; Evidence Engine separation of observation from interpretation; Hypothesis/Decision uncertainty and premature diagnosis; evaluation integrity; unnecessary complexity; and unsupported novelty claims.
+            
+            Flag unnecessary additions such as generic LSTM/GRU/autoencoder anomaly detection, multi-agent swarms, generic chatbots, vector DB/RAG added only for novelty, autonomous RCA/remediation, cost-aware tool selection, or another standalone abstention mechanism.
+            
+            Never invent test results. If execution is unavailable, write exactly: "Execution not verified."
+            
+            Required output:
+            # IncidentIQ AI Research Review
+            ## 1. Project Status
+            ## 2. What Changed
+            ## 3. What Is Correct
+            ## 4. Mistakes / Risks
+            For each issue: Severity (BLOCKER/HIGH/MEDIUM/LOW), Location, Problem, Why it matters, Minimal fix.
+            ## 5. Research Integrity
+            ## 6. Research Impact
+            ## 7. What Should NOT Be Added
+            ## 8. Next Steps
+            ## 9. Merge Readiness
+            Choose exactly one: NOT READY / READY AFTER FIXES / READY FOR REVIEW. Do not call it ready if important tests are unverified.
+            ## 10. One-Sentence Verdict
+            
+            Be ruthless, factual, concise, and technically specific.
           output-file: incidentiq-ai-review.md
 
   publish-review:
