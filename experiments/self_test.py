@@ -22,11 +22,11 @@ from src.evaluation import (
     ParticipantTrialRecord,
     assert_participant_safe,
     build_assignment,
+    build_validated_assignment,
     confidence_error,
     evaluate_trial,
     participant_record_schema_fields,
     serialize_reproducibility,
-    summarize,
     validate_condition,
 )
 
@@ -109,6 +109,8 @@ def test_09_leakage_guard():
         {"ground_truth": {"diagnosis": "x"}},
         {"condition_rationale": "hidden"},
         {"label": "ambiguous"},
+        {"nested": [{"condition_label": "clear"}]},
+        {"status": "UNVALIDATED"},
     ):
         try:
             assert_participant_safe(payload)
@@ -189,6 +191,13 @@ def test_15_ai_following_and_override():
 
 
 def test_16_missing_telemetry_and_deterministic_evaluation():
+    incomplete = ConditionEvidence(
+        "c1", "incomplete", "Required logs are absent.", ("a",),
+        required_evidence=("service logs",), missing_evidence=("service logs",),
+        evidence_refs=("telemetry:missing:service-logs",),
+    )
+    assert validate_condition(incomplete).validation_status == "VALIDATED"
+
     trial = base_trial()
     truth = GroundTruthRecord("t1", "c1", ("x",))
     r1 = evaluate_trial(trial, truth)
@@ -214,10 +223,71 @@ def test_18_reproducibility_serialization():
     assert '"seed":42' in serialized
 
 
+def test_19_validated_assignment_gate():
+    evidence = ConditionEvidence(
+        "c1", "ambiguous", "Two hypotheses remain plausible.", ("a", "b"),
+        ("latency",), evidence_refs=("e1",)
+    )
+    assignment = build_validated_assignment("p1", "c1", "svc", Mode.INCIDENTIQ, evidence, 3)
+    assert assignment.condition == "ambiguous"
+    try:
+        build_validated_assignment(
+            "p1", "c1", "svc", Mode.INCIDENTIQ,
+            ConditionEvidence("c1", "ambiguous", "no refs", ("a", "b")),
+            3,
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("unvalidated condition was accepted")
+
+
+def test_20_condition_specific_evaluation():
+    trial = base_trial(final_diagnosis="x")
+    truth = GroundTruthRecord("t1", "c1", ("x",), condition="conflicting")
+    result = evaluate_trial(trial, truth)
+    assert result.condition == "conflicting"
+
+
+def test_21_invalid_mode_and_condition_rejected():
+    for bad_mode, bad_condition in [("bad_mode", "clear"), ("human_only", "bad_condition")]:
+        try:
+            build_assignment("p", "c", "svc", Mode.HUMAN_ONLY if bad_mode == "bad_mode" else bad_mode,
+                             bad_condition, 1)
+        except (ValueError, AttributeError):
+            pass
+        else:
+            raise AssertionError("invalid assignment was accepted")
+
+
+def test_22_participant_payload_has_no_evaluator_condition_fields():
+    payload = base_trial().to_dict()
+    assert_participant_safe(payload)
+    assert "condition" not in payload
+    assert "ground_truth" not in payload
+
+
+def test_23_condition_specific_metrics_remain_deterministic():
+    truth = GroundTruthRecord("t1", "c1", ("x",), condition="misleading")
+    trial = base_trial(final_diagnosis="x", confidence=90)
+    r1 = evaluate_trial(trial, truth)
+    r2 = evaluate_trial(trial, truth)
+    assert r1.condition == "misleading"
+    assert r1 == r2
+
+
 def run():
     tests = [value for name, value in globals().items() if name.startswith("test_")]
+    failures = []
     for test in tests:
-        test()
+        try:
+            test()
+        except Exception as exc:
+            failures.append((test.__name__, str(exc)))
+    if failures:
+        for name, message in failures:
+            print(f"FAIL {name}: {message}")
+        raise SystemExit(f"{len(failures)} tests failed; {len(tests) - len(failures)} passed")
     print(f"{len(tests)} tests passed")
 
 
