@@ -4,9 +4,16 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, asdict
-from typing import Any, Iterable, Mapping
+from typing import Any, Mapping
 
-from .schemas import ALLOWED_CONDITIONS, ALLOWED_MODES, Mode, ParticipantTrialRecord
+from .conditions import validate_condition
+from .schemas import (
+    ALLOWED_CONDITIONS,
+    ALLOWED_MODES,
+    ConditionEvidence,
+    Mode,
+    ParticipantTrialRecord,
+)
 
 
 FORBIDDEN_KEYS = {
@@ -16,10 +23,12 @@ FORBIDDEN_KEYS = {
     "ground_truth",
     "answer_key",
     "condition_rationale",
+    "condition_label",
+    "condition_status",
 }
 FORBIDDEN_VALUES = {
     "clear", "ambiguous", "conflicting", "incomplete", "misleading",
-    "novel", "historical mismatch"
+    "novel", "historical mismatch", "unvalidated",
 }
 
 
@@ -62,6 +71,30 @@ def build_assignment(
         system=system,
         mode=mode.value,
         condition=condition,
+        seed=seed,
+    )
+
+
+def build_validated_assignment(
+    participant_id: str,
+    case_id: str,
+    system: str,
+    mode: Mode,
+    condition_evidence: ConditionEvidence,
+    seed: int,
+) -> TrialAssignment:
+    """Create an assignment only from an evidence-validated condition record."""
+    validated = validate_condition(condition_evidence)
+    if validated.validation_status != "VALIDATED":
+        raise ValueError(
+            f"Condition {condition_evidence.condition!r} is not validated from evidence"
+        )
+    return build_assignment(
+        participant_id=participant_id,
+        case_id=case_id,
+        system=system,
+        mode=mode,
+        condition=validated.condition,
         seed=seed,
     )
 
