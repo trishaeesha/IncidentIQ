@@ -16,6 +16,18 @@ def test_time_column_is_never_treated_as_evidence(tmp_path):
     assert records[0]["metric"] == "cpu"
 
 
+def test_baseline_quality_uses_same_mean_baseline_as_relative_change(tmp_path):
+    p = tmp_path / "metrics.parquet"
+    # Mean = 10, median = 1. The quality calculation must use the mean,
+    # because relative_change also uses the mean.
+    pd.DataFrame({
+        "timestamp": [90.0, 91.0, 92.0, 110.0],
+        "cpu": [1.0, 1.0, 1.0, 20.0],
+    }).to_parquet(p)
+    records = extract_metric_evidence(p, INJECTION)
+    assert records[0]["baseline_quality"] == "stable"
+
+
 def test_near_zero_baseline_has_no_absurd_relative_percentage(tmp_path):
     p = tmp_path / "metrics.parquet"
     pd.DataFrame({"timestamp": [90.0, 110.0], "cpu": [0.0, 10_000.0]}).to_parquet(p)
