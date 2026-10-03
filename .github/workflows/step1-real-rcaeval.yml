@@ -56,6 +56,23 @@ jobs:
       - name: Inspect downloaded telemetry layout
         run: find rcaeval_ci -type f -maxdepth 4 -print
 
+      - name: Inspect telemetry schemas
+        env:
+          CASE_ID: ${{ matrix.case }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import pandas as pd
+          root = Path("rcaeval_ci") / os.environ["CASE_ID"]
+          for name in ("metrics.parquet", "logs.parquet", "traces.parquet"):
+              p = root / name
+              if p.exists():
+                  df = pd.read_parquet(p)
+                  print(name, "columns=", list(df.columns))
+                  print(name, "rows=", len(df))
+          PY
+
       - name: Run real RCAEval case
         env:
           CASE_ID: ${{ matrix.case }}
