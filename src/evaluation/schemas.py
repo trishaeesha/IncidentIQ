@@ -76,13 +76,16 @@ class ParticipantTrialRecord:
 
 @dataclass(frozen=True)
 class GroundTruthRecord:
+    """Evaluator-only decision-level answer key."""
     trial_id: str
     case_id: str
     correct_diagnoses: tuple[str, ...]
     correct_action_ids: tuple[str, ...] = ()
     unnecessary_action_ids: tuple[str, ...] = ()
     incorrect_action_ids: tuple[str, ...] = ()
+    evidence_needed_by_action: dict[str, tuple[str, ...]] = field(default_factory=dict)
     condition: Optional[str] = None
+    condition_rationale: Optional[str] = None
 
 
 @dataclass(frozen=True)
