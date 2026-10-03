@@ -27,7 +27,12 @@ def filter_cases(
 
 def case_paths(data_root: str | Path, case_id: str) -> dict[str, Path | None]:
     """Return expected local telemetry paths for a downloaded case."""
-    folder = Path(data_root) / case_id / case_id
+    base = Path(data_root) / case_id
+    folder = base / case_id
+    # Hugging Face snapshot_download may preserve the case folder only once;
+    # local manual downloads used by the project may contain case/case.
+    if not folder.exists() and base.exists():
+        folder = base
     return {
         "root": folder,
         "metrics": folder / "metrics.parquet",
