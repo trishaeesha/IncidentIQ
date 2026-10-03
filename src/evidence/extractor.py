@@ -57,13 +57,16 @@ def _baseline_quality(values: pd.Series) -> str:
     clean = pd.to_numeric(values, errors="coerce").dropna()
     if clean.empty:
         return "unavailable"
-    median = float(clean.median())
-    if abs(median) < 1e-9:
+    # Relative change is computed from the mean, so baseline quality must use
+    # the same baseline statistic. Mixing median and mean can misclassify a
+    # metric and makes the evidence-strength semantics internally inconsistent.
+    mean = float(clean.mean())
+    if abs(mean) < 1e-9:
         return "near_zero"
     std = float(clean.std())
     if pd.isna(std):
         return "stable"
-    cv = abs(std / median)
+    cv = abs(std / mean)
     if cv < 0.25:
         return "stable"
     if cv < 0.75:
