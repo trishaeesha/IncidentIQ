@@ -52,10 +52,10 @@ def transform(rows,condition):
     if condition=="novel": return rows,"UNVALIDATED",["requires verified historical-reference removal"]
     raise ValueError(condition)
 
-def load_validated_cases(path):
+def load_validated_conditions(path):
     payload=json.loads(Path(path).read_text(encoding="utf-8"))
     return {
-        row["case_id"]
+        (row["case_id"], row["condition"])
         for row in payload.get("candidates", [])
         if row.get("status")=="VALIDATED" and row.get("telemetry_verified") is True
     }
@@ -69,7 +69,7 @@ def main():
     p.add_argument("--participant-pool-out",required=True)
     a=p.parse_args()
 
-    validated_cases=load_validated_cases(a.telemetry_validation)
+    validated_conditions=load_validated_conditions(a.telemetry_validation)
     records=[]
     for path in sorted(Path(a.outputs).glob("*.json")):
         data=json.loads(path.read_text(encoding="utf-8"))
@@ -82,9 +82,9 @@ def main():
         for condition in CONDITIONS:
             evidence,status,notes=transform(data["evidence_digest"],condition)
             raw_status=status
-            if raw_case not in validated_cases:
+            if (raw_case, condition) not in validated_conditions:
                 status="UNVALIDATED"
-                notes=["case is not present in researcher telemetry validation report as VALIDATED"]
+                notes=["case-condition is not present in researcher telemetry validation report as VALIDATED"]
             for mode in MODES:
                 researcher.append({"trial_id":f"{public_case}-{condition}-{mode}",
                     "public_case_id":public_case,"source_case_id":raw_case,
@@ -100,7 +100,7 @@ def main():
     Path(a.researcher_out).write_text(json.dumps({"trial_count":len(researcher),"trials":researcher},indent=2),encoding="utf-8")
     Path(a.participant_pool_out).write_text(json.dumps({"schema_version":1,
         "participant_safe":False,"participant_pool":True,"trial_count":len(pool),"trials":pool},indent=2),encoding="utf-8")
-    print(json.dumps({"cases":len(records),"validated_cases":len(validated_cases),
+    print(json.dumps({"cases":len(records),"validated_conditions":len(validated_conditions),
                       "researcher_trials":len(researcher),
                       "validated_pool_trials":len(pool)},indent=2))
 
