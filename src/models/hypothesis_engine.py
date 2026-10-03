@@ -22,6 +22,7 @@ class HypothesisEngine:
             "expected": (
                 "cpu",
                 "memory",
+                "mem",
                 "resource",
                 "utilization",
                 "saturation",
@@ -52,6 +53,8 @@ class HypothesisEngine:
             "expected": (
                 "downstream",
                 "dependency",
+                "delay",
+                "latency",
                 "span latency",
             ),
             "service": True,
@@ -97,6 +100,9 @@ class HypothesisEngine:
             "name": "network or communication issue",
             "expected": (
                 "network",
+                "loss",
+                "packet loss",
+                "socket",
                 "connection",
                 "timeout",
                 "packet",
