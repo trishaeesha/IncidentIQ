@@ -3,6 +3,7 @@ name: IncidentIQ AI Research Review
 on:
   push:
     branches:
+      - "main"
       - "feature/**"
       - "fix/**"
       - "friend3/**"
