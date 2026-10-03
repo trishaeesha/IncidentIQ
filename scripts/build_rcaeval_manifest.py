@@ -35,9 +35,6 @@ def main() -> None:
     if len(manifest) != 270:
         raise RuntimeError(f"Expected 270 RE2 cases, found {len(manifest)}.")
 
-    manifest["fault_description"] = manifest["case"].map(
-        lambda c: meta[c].get("fault_description")
-    )
     manifest["n_metrics"] = manifest["case"].map(lambda c: meta[c].get("n_metrics"))
     manifest["n_timesteps"] = manifest["case"].map(
         lambda c: meta[c].get("n_timesteps")
@@ -48,6 +45,17 @@ def main() -> None:
     manifest["n_logs"] = manifest["case"].map(lambda c: meta[c].get("n_logs", 0))
     manifest["n_traces"] = manifest["case"].map(
         lambda c: meta[c].get("n_traces", 0)
+    )
+
+    # Ground-truth fields are retained only in memory for deterministic
+    # evaluator-side stratification/scoring. They must never be written to
+    # participant-facing manifests or candidate pools.
+    manifest["_fault"] = manifest["case"].map(lambda c: meta[c].get("fault"))
+    manifest["_fault_description"] = manifest["case"].map(
+        lambda c: meta[c].get("fault_description")
+    )
+    manifest["_root_cause_service"] = manifest["case"].map(
+        lambda c: meta[c].get("root_cause_service")
     )
     manifest["injection_time"] = manifest["case"].map(
         lambda c: meta[c].get("injection_time")
@@ -60,19 +68,23 @@ def main() -> None:
     manifest["selected_for_benchmark"] = False
     manifest["selection_reason"] = ""
 
-    # Deterministic candidate pool: spread cases across system, fault and
-    # repetition without treating repetitions as independent incidents.
-    # This is a DIVERSE POOL, not the final 6-condition benchmark.
+    # Deterministic candidate pool: spread cases across system/fault while
+    # avoiding repeated injections of the same service/fault family. This is a
+    # DIVERSE POOL, not the final six-condition benchmark.
     manifest = manifest.sort_values(
-        ["system", "fault", "repetition", "case"], kind="stable"
+        ["system", "_fault", "_root_cause_service", "repetition", "case"],
+        kind="stable",
     ).reset_index(drop=True)
+    manifest["_selection_family"] = manifest["_root_cause_service"].fillna(
+        manifest["case"].str.rsplit("_", n=1).str[0]
+    )
 
-    groups = manifest.groupby(["system", "fault"], sort=True)
+    groups = manifest.groupby(["system", "_fault"], sort=True)
     per_group = max(1, args.candidate_count // len(groups))
     selected_parts = []
     for _, group in groups:
-        reps = group.sort_values(["repetition", "case"])
-        selected_parts.append(reps.head(per_group))
+        unique_families = group.drop_duplicates("_selection_family", keep="first")
+        selected_parts.append(unique_families.head(per_group))
 
     candidates = pd.concat(selected_parts, ignore_index=True).drop_duplicates("case")
 
@@ -89,8 +101,35 @@ def main() -> None:
         manifest["case"].isin(candidates["case"]), "selection_reason"
     ] = "diverse candidate pool; condition not yet validated"
 
-    manifest.to_csv(output_dir / "rcaeval_re2_manifest.csv", index=False)
-    candidates.to_csv(output_dir / "rcaeval_re2_candidate_pool.csv", index=False)
+    # Keep participant-facing artifacts free of ground-truth answer fields.
+    evaluator_columns = [
+        "case", "_fault", "_fault_description", "_root_cause_service"
+    ]
+    evaluator_labels = manifest[evaluator_columns].rename(
+        columns={
+            "_fault": "fault",
+            "_fault_description": "fault_description",
+            "_root_cause_service": "root_cause_service",
+        }
+    )
+    evaluator_labels.to_csv(
+        output_dir / "rcaeval_re2_evaluator_labels.csv", index=False
+    )
+
+    participant_columns = [
+        "case", "dataset", "system", "repetition", "has_logs",
+        "has_traces", "available", "n_metrics", "n_timesteps",
+        "duration_minutes", "n_logs", "n_traces", "injection_time",
+        "condition", "condition_validation_status", "selected_for_benchmark",
+        "selection_reason",
+    ]
+    participant_manifest = manifest[participant_columns].copy()
+    participant_candidates = candidates[participant_columns].copy()
+
+    participant_manifest.to_csv(output_dir / "rcaeval_re2_manifest.csv", index=False)
+    participant_candidates.to_csv(
+        output_dir / "rcaeval_re2_candidate_pool.csv", index=False
+    )
 
     print(f"RE2 cases: {len(manifest)}")
     print(f"Locally available: {int(manifest['available'].sum())}")
@@ -100,6 +139,7 @@ def main() -> None:
     print("Gray-area conditions remain UNVALIDATED by design.")
     print(f"Manifest: {output_dir / 'rcaeval_re2_manifest.csv'}")
     print(f"Candidates: {output_dir / 'rcaeval_re2_candidate_pool.csv'}")
+    print(f"Evaluator-only labels: {output_dir / 'rcaeval_re2_evaluator_labels.csv'}")
 
 
 if __name__ == "__main__":
