@@ -1,0 +1,34 @@
+dataset:
+  name: RCAEval
+  repo: phamquiluan/RCAEval
+  source: huggingface
+  raw_data_in_git: false
+
+benchmark:
+  target_cases: 60-100
+  conditions:
+    - clear
+    - ambiguous
+    - conflicting
+    - incomplete
+    - misleading
+    - novel
+
+modes:
+  - human_only
+  - generic_ai
+  - incidentiq
+
+evaluation:
+  primary:
+    - diagnosis_accuracy
+    - time_to_correct_hypothesis
+    - time_to_correct_action
+    - unnecessary_actions
+    - incorrect_actions
+  secondary:
+    - verification_effort
+    - ai_reliance
+    - ai_override_rate
+    - confidence
+    - calibration
