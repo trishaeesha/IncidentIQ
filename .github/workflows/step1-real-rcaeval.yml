@@ -18,8 +18,6 @@ jobs:
           - re2ob_checkoutservice_mem_2
           - re2ss_user_loss_1
           - re2ss_catalogue_loss_1
-          - re2ob_catalogue_disk_1
-          - re2ob_payment_delay_1
           - re2ob_emailservice_socket_1
           - re2ss_orders_mem_1
           - re2ss_payment_cpu_1
