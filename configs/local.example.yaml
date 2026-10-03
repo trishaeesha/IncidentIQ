@@ -3,7 +3,7 @@
 
 dataset:
   metadata_path: C:/path/to/RCAEval_ALL_735.json
-  data_root: C:/path/to/RCAEval_gray_candidates
+  data_root: C:/path/to/RCAEval_auto_analysis
 
 runtime:
   random_seed: 42
