@@ -164,12 +164,21 @@ class HypothesisEngine:
             expected = any(token in direction or token in observation for token in rule["expected"])
             strength = str(row.get("evidence_strength", "")).lower()
 
-            if expected and strength not in {"contradictory", "negative"}:
+            explicitly_negative = strength in {"contradictory", "negative"}
+            explicitly_normal = (
+                "normal" in observation
+                or "unchanged" in observation
+                or direction in {"decrease", "decreased", "down", "stable", "unchanged"}
+            )
+
+            if expected and not explicitly_negative:
                 supporting.append(self._ref(row))
                 services[str(row.get("service") or "unknown")] += self._strength_value(strength)
-            elif strength in {"strong", "moderate", "medium"} or "normal" in observation or "unchanged" in observation:
+            elif explicitly_negative or explicitly_normal:
                 contradicting.append(self._ref(row))
             else:
+                # Relevant evidence can be strong without supporting or
+                # contradicting the current rule. Keep it neutral.
                 neutral.append(self._ref(row))
 
         if not supporting and not missing and not contradicting:
