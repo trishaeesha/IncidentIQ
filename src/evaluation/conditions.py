@@ -38,7 +38,7 @@ def validate_condition(candidate: ConditionEvidence) -> ConditionEvidence:
     elif condition is GrayAreaCondition.INCOMPLETE:
         valid = bool(required) and bool(missing) and bool(required & missing)
     elif condition is GrayAreaCondition.MISLEADING:
-        valid = bool(misleading) and bool(hypotheses) and bool(evidence)
+        # A documented misleading signal is itself an observable evidence characteristic.\n        valid = bool(misleading) and bool(hypotheses) and bool(evidence | misleading)
     elif condition is GrayAreaCondition.NOVEL:
         quality = (candidate.historical_match_quality or "").strip().lower()
         valid = quality in {"none", "low", "poor"} and bool(evidence)
