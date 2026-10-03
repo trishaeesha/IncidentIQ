@@ -3,7 +3,7 @@ name: IncidentIQ Step 1 Real RCAEval Cases
 on:
   push:
     branches:
-      - "integration/step1-real-rcaeval-case"
+      - "research/final-integration"
   workflow_dispatch:
 
 jobs:
@@ -96,6 +96,47 @@ jobs:
         with:
           name: incidentiq-step1-${{ matrix.case }}
           path: step1_${{ matrix.case }}.json
+
+  evaluator:
+    needs: real-case-baseline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Download participant-safe results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: incidentiq-step1-*
+          path: results
+          merge-multiple: true
+      - name: Download evaluator-only RCAEval index
+        run: |
+          python - <<'PY'
+          from huggingface_hub import hf_hub_download
+          hf_hub_download(
+              repo_id="phamquiluan/RCAEval",
+              repo_type="dataset",
+              filename="cases.parquet",
+              local_dir="evaluator_data",
+          )
+          PY
+      - name: Score evaluator metrics
+        run: |
+          mkdir -p evaluator_results
+          for f in results/step1_*.json; do
+            python experiments/score_rcaeval_result.py               --cases evaluator_data/cases.parquet               --result "$f" >> evaluator_results/root_service_scores.jsonl
+          done
+      - name: Upload evaluator results
+        uses: actions/upload-artifact@v4
+        with:
+          name: incidentiq-evaluator-results
+          path: evaluator_results/root_service_scores.jsonl
 
 # CI re-run after evaluation self-test integration.
 
