@@ -1,0 +1,22 @@
+name: research-validation
+on:
+  push:
+    branches:
+      - research/step2-gray-area-harness
+  pull_request:
+    branches:
+      - research/final-integration
+jobs:
+  python-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile research scripts
+        run: |
+          python -m py_compile experiments/build_study_manifest.py
+          python -m py_compile experiments/make_participant_assignment.py
+          python -m py_compile experiments/score_human_study.py
+          python -m py_compile experiments/study_server.py
