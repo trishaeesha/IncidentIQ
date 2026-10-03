@@ -8,6 +8,8 @@ from typing import Any
 class DecisionEngine:
     """Turn deterministic hypothesis results into a human-controlled decision aid."""
 
+    MIN_SELECTION_CONFIDENCE = 0.55
+
     def decide(self, inference: dict[str, Any]) -> dict[str, Any]:
         hypotheses = inference.get("hypotheses", [])
         status = inference.get("status", "insufficient_evidence")
@@ -34,20 +36,30 @@ class DecisionEngine:
         )
 
         top = ordered[0]
+        top_confidence = float(top.get("confidence", 0.0))
         tied = len(ordered) > 1 and abs(
-            float(top.get("confidence", 0.0)) - float(ordered[1].get("confidence", 0.0))
+            top_confidence - float(ordered[1].get("confidence", 0.0))
         ) < 0.05
 
-        if status == "unable_to_distinguish" or tied:
+        if (
+            status == "unable_to_distinguish"
+            or tied
+            or top_confidence < self.MIN_SELECTION_CONFIDENCE
+            or str(top.get("uncertainty", "")).lower() == "high"
+        ):
             action = self._choose_discriminating_action(ordered)
             return {
                 "case_id": inference.get("case_id"),
-                "decision": "Unable to distinguish between competing hypotheses.",
+                "decision": "Unable to justify selecting one explanation from current evidence.",
                 "selected_hypothesis": None,
                 "competing_hypotheses": [h.get("hypothesis") for h in ordered],
                 "recommended_action": action,
                 "human_control_required": True,
-                "rationale": "Current evidence does not justify selecting one explanation.",
+                "rationale": (
+                    "The current evidence does not meet the baseline selection threshold; "
+                    "the system recommends further verification rather than presenting a "
+                    "weak hypothesis as the diagnosis."
+                ),
             }
 
         return {
@@ -66,8 +78,7 @@ class DecisionEngine:
     @staticmethod
     def _choose_discriminating_action(hypotheses: list[dict[str, Any]]) -> str | None:
         for hypothesis in hypotheses:
-            checks = hypothesis.get("discriminating_checks", [])
-            for check in checks:
+            for check in hypothesis.get("discriminating_checks", []):
                 if check.get("check"):
                     return check["check"]
         return None
