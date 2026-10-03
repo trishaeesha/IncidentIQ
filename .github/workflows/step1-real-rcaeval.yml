@@ -53,6 +53,9 @@ jobs:
           )
           PY
 
+      - name: Inspect downloaded telemetry layout
+        run: find rcaeval_ci -type f -maxdepth 4 -print
+
       - name: Run real RCAEval case
         env:
           CASE_ID: ${{ matrix.case }}
