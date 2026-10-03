@@ -46,4 +46,4 @@ if __name__=="__main__":
  out=Path("outputs/gray_area_trial_specs.json")
  out.parent.mkdir(parents=True,exist_ok=True)
  out.write_text(json.dumps([asdict(x) for x in build()],indent=2))
- print(f"generated {18} participant-safe trial specifications")
+ print(f"generated {len(trials)} participant-safe trial specifications")
