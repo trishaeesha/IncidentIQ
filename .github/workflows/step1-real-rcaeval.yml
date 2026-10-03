@@ -1,0 +1,47 @@
+name: IncidentIQ Step 1 Real RCAEval Case
+
+on:
+  push:
+    branches:
+      - "integration/step1-real-rcaeval-case"
+  workflow_dispatch:
+
+jobs:
+  real-case-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install project dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download only the selected public RCAEval case
+        run: |
+          python - <<'PY'
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id="phamquiluan/RCAEval",
+              repo_type="dataset",
+              allow_patterns=[
+                  "re2ob_checkoutservice_cpu_2/*",
+              ],
+              local_dir="rcaeval_ci",
+          )
+          PY
+
+      - name: Run real RCAEval case
+        run: |
+          python experiments/run_real_rcaeval_case.py             --data-root "$GITHUB_WORKSPACE/rcaeval_ci"             --case re2ob_checkoutservice_cpu_2 | tee step1_result.json
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: incidentiq-step1-result
+          path: step1_result.json
