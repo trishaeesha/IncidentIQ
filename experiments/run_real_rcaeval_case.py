@@ -76,6 +76,19 @@ def main() -> None:
     assert_no_ground_truth(decision, "decision")
 
     grouped = group_evidence_by_service(evidence)
+    evidence_digest = [
+        {
+            "source": item.evidence_source,
+            "service": item.affected_service_component,
+            "signal": item.raw_measurements.get("signal"),
+            "observation": item.observation,
+            "direction": item.direction_change,
+            "magnitude": item.magnitude,
+            "strength": item.evidence_strength,
+        }
+        for item in evidence
+        if item.availability == "available"
+    ]
     available_sources = sorted(
         {item.evidence_source for item in evidence if item.availability == "available"}
     )
@@ -85,6 +98,7 @@ def main() -> None:
         "injection_time": injection_time,
         "available_sources": available_sources,
         "evidence_count": len(evidence),
+        "evidence_digest": evidence_digest,
         "services_observed": sorted(grouped),
         "hypothesis_status": hypothesis.get("status"),
         "hypotheses": [
