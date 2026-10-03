@@ -163,3 +163,49 @@ def test_decision_engine_recommends_check():
     inference = HypothesisEngine().infer([evidence()])
     decision = DecisionEngine().decide(inference)
     assert decision["recommended_action"]
+
+
+def test_accepts_real_evidence_engine_time_context_shape():
+    result = HypothesisEngine().infer([evidence(
+        time_context={"phase": "post_injection", "injection_time": 100.0},
+    )])
+    ref = result["hypotheses"][0]["supporting_evidence"][0]
+    assert isinstance(ref["time_context"], dict)
+    assert ref["time_context"]["phase"] == "post_injection"
+
+
+def test_decision_abstains_when_confidence_is_too_low():
+    inference = {
+        "case_id": "case-low-confidence",
+        "status": "hypotheses_available",
+        "hypotheses": [{
+            "hypothesis": "resource saturation",
+            "confidence": 0.40,
+            "uncertainty": "moderate",
+            "supporting_evidence": [],
+            "contradicting_evidence": [],
+            "discriminating_checks": [{"check": "Inspect resource utilization."}],
+            "next_diagnostic_action": "Inspect resource utilization.",
+        }],
+    }
+    decision = DecisionEngine().decide(inference)
+    assert decision["selected_hypothesis"] is None
+    assert decision["human_control_required"] is True
+
+
+def test_decision_abstains_on_high_uncertainty():
+    inference = {
+        "case_id": "case-high-uncertainty",
+        "status": "hypotheses_available",
+        "hypotheses": [{
+            "hypothesis": "resource saturation",
+            "confidence": 0.80,
+            "uncertainty": "high",
+            "supporting_evidence": [{"strength": "strong"}],
+            "contradicting_evidence": [{"strength": "strong"}],
+            "discriminating_checks": [{"check": "Inspect resource utilization."}],
+            "next_diagnostic_action": "Inspect resource utilization.",
+        }],
+    }
+    decision = DecisionEngine().decide(inference)
+    assert decision["selected_hypothesis"] is None
