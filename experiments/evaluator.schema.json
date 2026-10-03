@@ -1,1 +1,16 @@
-{"title":"IncidentIQ Evaluator / Ground-Truth Record","type":"object","required":["trial_id","case_id","correct_diagnoses"],"properties":{"trial_id":{"type":"string"},"case_id":{"type":"string"},"correct_diagnoses":{"type":"array","items":{"type":"string"}},"correct_action_ids":{"type":"array","items":{"type":"string"}},"unnecessary_action_ids":{"type":"array","items":{"type":"string"}},"incorrect_action_ids":{"type":"array","items":{"type":"string"}}},"additionalProperties":false}
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"IncidentIQ Evaluator / Ground-Truth Record",
+  "type":"object",
+  "required":["trial_id","case_id","correct_diagnoses","condition"],
+  "properties":{
+    "trial_id":{"type":"string","minLength":1},
+    "case_id":{"type":"string","minLength":1},
+    "condition":{"enum":["clear","ambiguous","conflicting","incomplete","misleading","novel"]},
+    "correct_diagnoses":{"type":"array","items":{"type":"string"},"minItems":1},
+    "correct_action_ids":{"type":"array","items":{"type":"string"}},
+    "unnecessary_action_ids":{"type":"array","items":{"type":"string"}},
+    "incorrect_action_ids":{"type":"array","items":{"type":"string"}}
+  },
+  "additionalProperties":false
+}
