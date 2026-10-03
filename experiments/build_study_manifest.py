@@ -1,4 +1,9 @@
-"""Build researcher and candidate participant manifests from real outputs."""
+"""Build researcher and participant manifests from validated real outputs.
+
+Participant generation is fail-closed: a telemetry validation report is required,
+and only cases explicitly marked VALIDATED by the researcher-side validator can
+enter the participant pool. Structural evidence alone is never enough.
+"""
 from __future__ import annotations
 import argparse, json
 from pathlib import Path
@@ -47,13 +52,24 @@ def transform(rows,condition):
     if condition=="novel": return rows,"UNVALIDATED",["requires verified historical-reference removal"]
     raise ValueError(condition)
 
+def load_validated_cases(path):
+    payload=json.loads(Path(path).read_text(encoding="utf-8"))
+    return {
+        row["case_id"]
+        for row in payload.get("candidates", [])
+        if row.get("status")=="VALIDATED" and row.get("telemetry_verified") is True
+    }
+
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("--outputs",required=True)
+    p.add_argument("--telemetry-validation",required=True,
+                   help="Researcher-only report produced by validate_gray_area_telemetry.py")
     p.add_argument("--researcher-out",required=True)
     p.add_argument("--participant-pool-out",required=True)
     a=p.parse_args()
 
+    validated_cases=load_validated_cases(a.telemetry_validation)
     records=[]
     for path in sorted(Path(a.outputs).glob("*.json")):
         data=json.loads(path.read_text(encoding="utf-8"))
@@ -62,12 +78,18 @@ def main():
     researcher=[]; pool=[]; pool_index=0
     for case_index,data in enumerate(records,1):
         public_case=f"CASE-{case_index:02d}"
+        raw_case=data["case_id"]
         for condition in CONDITIONS:
             evidence,status,notes=transform(data["evidence_digest"],condition)
+            raw_status=status
+            if raw_case not in validated_cases:
+                status="UNVALIDATED"
+                notes=["case is not present in researcher telemetry validation report as VALIDATED"]
             for mode in MODES:
                 researcher.append({"trial_id":f"{public_case}-{condition}-{mode}",
-                    "public_case_id":public_case,"source_case_id":data["case_id"],
-                    "condition":condition,"validation_status":status,"validation_notes":notes})
+                    "public_case_id":public_case,"source_case_id":raw_case,
+                    "condition":condition,"validation_status":status,
+                    "validation_notes":notes})
                 if status=="VALIDATED":
                     pool_index+=1
                     pool.append({"trial_id":f"TRIAL-POOL-{pool_index:04d}",
@@ -78,7 +100,8 @@ def main():
     Path(a.researcher_out).write_text(json.dumps({"trial_count":len(researcher),"trials":researcher},indent=2),encoding="utf-8")
     Path(a.participant_pool_out).write_text(json.dumps({"schema_version":1,
         "participant_safe":False,"participant_pool":True,"trial_count":len(pool),"trials":pool},indent=2),encoding="utf-8")
-    print(json.dumps({"cases":len(records),"researcher_trials":len(researcher),
+    print(json.dumps({"cases":len(records),"validated_cases":len(validated_cases),
+                      "researcher_trials":len(researcher),
                       "validated_pool_trials":len(pool)},indent=2))
 
 if __name__=="__main__": main()
