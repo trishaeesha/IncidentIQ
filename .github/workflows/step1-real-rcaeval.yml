@@ -1,4 +1,4 @@
-name: IncidentIQ Step 1 Real RCAEval Case
+name: IncidentIQ Step 1 Real RCAEval Cases
 
 on:
   push:
@@ -9,7 +9,15 @@ on:
 jobs:
   real-case-baseline:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        case:
+          - re2ob_checkoutservice_cpu_2
+          - re2ob_checkoutservice_mem_2
+          - re2ss_user_loss_1
+          - re2ss_catalogue_loss_1
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,26 +30,30 @@ jobs:
       - name: Install project dependencies
         run: pip install -r requirements.txt
 
-      - name: Download only the selected public RCAEval case
+      - name: Download selected public RCAEval case
+        env:
+          CASE_ID: ${{ matrix.case }}
         run: |
           python - <<'PY'
+          import os
           from huggingface_hub import snapshot_download
+          case = os.environ["CASE_ID"]
           snapshot_download(
               repo_id="phamquiluan/RCAEval",
               repo_type="dataset",
-              allow_patterns=[
-                  "re2ob_checkoutservice_cpu_2/*",
-              ],
+              allow_patterns=[f"{case}/*"],
               local_dir="rcaeval_ci",
           )
           PY
 
       - name: Run real RCAEval case
+        env:
+          CASE_ID: ${{ matrix.case }}
         run: |
-          python experiments/run_real_rcaeval_case.py             --data-root "$GITHUB_WORKSPACE/rcaeval_ci"             --case re2ob_checkoutservice_cpu_2 | tee step1_result.json
+          python experiments/run_real_rcaeval_case.py --data-root "$GITHUB_WORKSPACE/rcaeval_ci" --case "$CASE_ID" | tee "step1_${CASE_ID}.json"
 
       - name: Upload result
         uses: actions/upload-artifact@v4
         with:
-          name: incidentiq-step1-result
-          path: step1_result.json
+          name: incidentiq-step1-${{ matrix.case }}
+          path: step1_${{ matrix.case }}.json
