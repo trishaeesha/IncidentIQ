@@ -18,10 +18,10 @@ CANDIDATES = [
     ConditionEvidence(
         case_id="re2ob_checkoutservice_mem_2",
         condition="ambiguous",
-        condition_rationale="Resource pressure and downstream error behavior provide competing explanatory signals.",
+        condition_rationale="Resource pressure and error-like log behavior provide competing explanatory signals.",
         candidate_hypotheses=("resource saturation","error or failure increase"),
-        evidence_characteristics=("resource change","error-like frequency change"),
-        evidence_refs=("metrics:checkoutservice:memory","logs:checkoutservice:error"),
+        evidence_characteristics=("resource change","error-like log frequency change"),
+        evidence_refs=("metrics:checkoutservice:memory","logs:error_like"),
     ),
     ConditionEvidence(
         case_id="re2ss_user_loss_1",
