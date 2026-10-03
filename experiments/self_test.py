@@ -27,6 +27,7 @@ from src.evaluation import (
     evaluate_trial,
     participant_record_schema_fields,
     serialize_reproducibility,
+    summarize,
     validate_condition,
 )
 
@@ -250,14 +251,19 @@ def test_20_condition_specific_evaluation():
 
 
 def test_21_invalid_mode_and_condition_rejected():
-    for bad_mode, bad_condition in [("bad_mode", "clear"), ("human_only", "bad_condition")]:
-        try:
-            build_assignment("p", "c", "svc", Mode.HUMAN_ONLY if bad_mode == "bad_mode" else bad_mode,
-                             bad_condition, 1)
-        except (ValueError, AttributeError):
-            pass
-        else:
-            raise AssertionError("invalid assignment was accepted")
+    try:
+        build_assignment("p", "c", "svc", "bad_mode", "clear", 1)
+    except (ValueError, AttributeError):
+        pass
+    else:
+        raise AssertionError("invalid mode was accepted")
+
+    try:
+        build_assignment("p", "c", "svc", Mode.HUMAN_ONLY, "bad_condition", 1)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("invalid condition was accepted")
 
 
 def test_22_participant_payload_has_no_evaluator_condition_fields():
