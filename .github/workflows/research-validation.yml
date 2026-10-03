@@ -20,6 +20,7 @@ jobs:
           python -m py_compile experiments/make_participant_assignment.py
           python -m py_compile experiments/make_cohort_assignments.py
           python -m py_compile experiments/audit_gray_area_candidates.py
+          python -m py_compile experiments/validate_gray_area_telemetry.py
           python -m py_compile experiments/score_human_study.py
           python -m py_compile experiments/study_server.py
           python -m py_compile experiments/deployment_smoke.py
