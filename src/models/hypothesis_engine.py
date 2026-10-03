@@ -25,7 +25,6 @@ class HypothesisEngine:
                 "resource",
                 "utilization",
                 "saturation",
-                "load",
             ),
             "service": True,
             "check": (
@@ -51,8 +50,6 @@ class HypothesisEngine:
         {
             "name": "downstream latency",
             "expected": (
-                "latency",
-                "response time",
                 "downstream",
                 "dependency",
                 "span latency",
@@ -355,10 +352,16 @@ class HypothesisEngine:
             for h in candidates
         ):
             status = "insufficient_evidence"
-        elif len(candidates) > 1:
-            status = "unable_to_distinguish"
-        else:
+        elif len(candidates) == 1:
             status = "hypotheses_available"
+        else:
+            top_score = float(candidates[0].get("confidence", 0.0))
+            second_score = float(candidates[1].get("confidence", 0.0))
+            margin = top_score - second_score
+            if candidates[0].get("uncertainty") == "high" or margin < 0.15:
+                status = "unable_to_distinguish"
+            else:
+                status = "hypotheses_available"
 
         decision = self._build_decision(
             candidates,
