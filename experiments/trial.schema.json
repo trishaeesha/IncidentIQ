@@ -1,1 +1,55 @@
-{"title":"IncidentIQ Participant Trial Record","type":"object","required":["trial_id","participant_id","case_id","system","mode","start_time"],"properties":{"trial_id":{"type":"string"},"participant_id":{"type":"string"},"case_id":{"type":"string"},"system":{"type":"string"},"mode":{"enum":["human_only","generic_ai","incidentiq"]},"start_time":{"type":"string"},"end_time":{"type":["string","null"]},"final_diagnosis":{"type":["string","null"]},"confidence":{"type":["number","null"],"minimum":0,"maximum":100},"diagnostic_actions":{"type":"array"},"decision_events":{"type":"array"},"ai_recommendations":{"type":"array"},"actions_followed":{"type":"array"},"actions_overridden":{"type":"array"},"workload_score":{"type":["number","null"]}},"additionalProperties":false}
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"IncidentIQ Participant Trial Record",
+  "type":"object",
+  "required":["trial_id","participant_id","case_id","system","mode","start_time"],
+  "properties":{
+    "trial_id":{"type":"string","minLength":1},
+    "participant_id":{"type":"string","minLength":1},
+    "case_id":{"type":"string","minLength":1},
+    "system":{"type":"string","minLength":1},
+    "mode":{"enum":["human_only","generic_ai","incidentiq"]},
+    "start_time":{"type":"string","minLength":1},
+    "end_time":{"type":["string","null"]},
+    "final_diagnosis":{"type":["string","null"]},
+    "confidence":{"type":["number","null"],"minimum":0,"maximum":100},
+    "diagnostic_actions":{
+      "type":"array",
+      "items":{
+        "type":"object",
+        "required":["action_id","action_type"],
+        "properties":{
+          "action_id":{"type":"string"},
+          "action_type":{"type":"string"},
+          "target":{"type":["string","null"]},
+          "rationale":{"type":["string","null"]},
+          "timestamp_s":{"type":["number","null"],"minimum":0}
+        },
+        "additionalProperties":false
+      }
+    },
+    "decision_events":{
+      "type":"array",
+      "items":{
+        "type":"object",
+        "required":["timestamp_s","event_type"],
+        "properties":{
+          "timestamp_s":{"type":"number","minimum":0},
+          "event_type":{"type":"string"},
+          "observation":{"type":["string","null"]},
+          "hypothesis":{"type":["string","null"]},
+          "reason_evidence":{"type":"array","items":{"type":"string"}},
+          "action_id":{"type":["string","null"]},
+          "result":{"type":["string","null"]},
+          "confidence":{"type":["number","null"],"minimum":0,"maximum":100}
+        },
+        "additionalProperties":false
+      }
+    },
+    "ai_recommendations":{"type":"array","items":{"type":"string"}},
+    "actions_followed":{"type":"array","items":{"type":"string"}},
+    "actions_overridden":{"type":"array","items":{"type":"string"}},
+    "workload_score":{"type":["number","null"],"minimum":0}
+  },
+  "additionalProperties":false
+}
