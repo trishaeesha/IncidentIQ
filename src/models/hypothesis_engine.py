@@ -264,6 +264,23 @@ class HypothesisEngine:
                 rows,
             )
 
+            # Evidence from unrelated services must not contradict a
+            # service-specific hypothesis. Otherwise a global incident
+            # symptom can drown out the signal at the candidate service.
+            if primary_service:
+                supporting = [
+                    item for item in supporting
+                    if item.get("service") in {None, primary_service}
+                ]
+                contradicting = [
+                    item for item in contradicting
+                    if item.get("service") in {None, primary_service}
+                ]
+                neutral = [
+                    item for item in neutral
+                    if item.get("service") in {None, primary_service}
+                ]
+
             uncertainty, uncertainty_reasons = (
                 self._calculate_uncertainty(
                     supporting,
