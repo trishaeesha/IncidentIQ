@@ -57,4 +57,20 @@ The contribution must be demonstrated experimentally through human-AI diagnostic
 
 ## Status
 
-Research design / benchmark construction phase.
+**Implementation phase started.**
+
+Current milestone: build the end-to-end IncidentIQ pipeline on a verified local subset of RCAEval, then scale the same pipeline to the benchmark.
+
+The agreed research setup is fixed. Implementation work should not silently change the research question, six incident conditions, three comparison modes, or primary evaluation metrics.
+
+## Development flow
+
+1. Load verified RCAEval cases locally.
+2. Extract structured incident evidence from metrics, logs, and traces.
+3. Represent supporting, contradictory, and missing evidence.
+4. Generate and compare candidate hypotheses.
+5. Provide diagnostic guidance and uncertainty.
+6. Expose the pipeline through the prototype UI/API.
+7. Test on multiple cases.
+8. Construct and validate the six incident conditions.
+9. Run human-only, generic-AI, and IncidentIQ evaluations.
