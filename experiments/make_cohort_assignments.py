@@ -43,8 +43,7 @@ def main():
     out=Path(a.out); out.parent.mkdir(parents=True,exist_ok=True)
     out.write_text(json.dumps({"schema_version":1,"participant_safe":True,
         "participants":assignments},indent=2),encoding="utf-8")
-    print(json.dumps({"participants":a.participants if hasattr(a,"participants") else None,
-                      "participant_count":len(assignments),
+    print(json.dumps({"participant_count":len(assignments),
                       "cells":len(cells),"output":str(out)},indent=2))
 
 if __name__=="__main__": main()
