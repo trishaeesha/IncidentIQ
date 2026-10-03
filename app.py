@@ -5,6 +5,20 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from src.models import DecisionEngine, HypothesisEngine
 
+FORBIDDEN = {"root_cause_service", "fault", "fault_description", "ground_truth", "answer_key"}
+
+
+def assert_safe(value):
+    if isinstance(value, dict):
+        leaked = FORBIDDEN.intersection({str(k).lower() for k in value})
+        if leaked:
+            raise ValueError("ground-truth fields are not accepted")
+        for item in value.values():
+            assert_safe(item)
+    elif isinstance(value, list):
+        for item in value:
+            assert_safe(item)
+
 
 class Handler(BaseHTTPRequestHandler):
     def _send(self, status: int, payload: dict) -> None:
@@ -28,6 +42,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             length = int(self.headers.get("Content-Length", "0"))
             payload = json.loads(self.rfile.read(length))
+            assert_safe(payload)
             evidence = payload.get("evidence", [])
             if not isinstance(evidence, list):
                 raise ValueError("evidence must be a list")
