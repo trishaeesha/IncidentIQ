@@ -96,3 +96,5 @@ jobs:
         with:
           name: incidentiq-step1-${{ matrix.case }}
           path: step1_${{ matrix.case }}.json
+
+# CI re-run after evaluation self-test integration.
