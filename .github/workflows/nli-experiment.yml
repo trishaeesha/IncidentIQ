@@ -1,0 +1,47 @@
+name: IncidentIQ Contextual NLI Experiment
+
+on:
+  push:
+    branches:
+      - "integration/step1-real-rcaeval-case"
+  workflow_dispatch:
+
+jobs:
+  nli-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install optional NLI dependencies
+        run: pip install -r requirements-nlp.txt pytest
+
+      - name: Run NLI unit tests
+        run: pytest -q tests/test_nli_evidence.py
+
+      - name: Run contextual relation smoke test
+        run: |
+          python - <<'PY'
+          from src.nlp import NLIEvidenceInterpreter
+          model = NLIEvidenceInterpreter()
+          examples = [
+              ("checkoutservice CPU utilization increased sharply after the incident started.",
+               "checkoutservice is experiencing resource saturation."),
+              ("checkoutservice CPU utilization remained stable.",
+               "checkoutservice is experiencing resource saturation."),
+              ("checkoutservice latency increased.",
+               "checkoutservice is experiencing resource saturation."),
+          ]
+          for evidence, hypothesis in examples:
+              result = model.classify(evidence, hypothesis)
+              print({
+                  "relation": result.relation,
+                  "score": round(result.score, 4),
+                  "evidence": evidence,
+                  "hypothesis": hypothesis,
+              })
+          PY
