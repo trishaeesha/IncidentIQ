@@ -64,6 +64,8 @@ def build_assignment(
     condition: str,
     seed: int,
 ) -> TrialAssignment:
+    if not isinstance(mode, Mode):
+        raise ValueError(f"Unsupported mode: {mode!r}")
     return TrialAssignment(
         trial_id=deterministic_trial_id(participant_id, case_id, mode.value, seed),
         participant_id=participant_id,
