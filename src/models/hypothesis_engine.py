@@ -1,286 +1,818 @@
-"""Deterministic hypothesis generation and evidence-to-hypothesis evaluation."""
+"""Deterministic hypothesis generation and decision support for IncidentIQ."""
 
 from __future__ import annotations
 
-from collections import defaultdict
-from typing import Any, Iterable
-
-from .schemas import HypothesisResult
+from typing import Any
 
 
 class HypothesisEngine:
-    """Generate a small, interpretable set of hypotheses from structured evidence.
+    """Interpret structured evidence into competing diagnostic hypotheses."""
 
-    The engine consumes observations only. It never accepts RCAEval answer fields.
-    Scores are heuristic support scores, not calibrated probabilities.
-    """
+    GROUND_TRUTH_FIELDS = {
+        "root_cause_service",
+        "fault",
+        "fault_description",
+        "ground_truth",
+        "ground_truth_label",
+    }
 
-    _MAX_HYPOTHESES = 3
-
-    _RULES = (
+    RULES = [
         {
             "name": "resource saturation",
-            "description": "The affected service may be constrained by a resource such as CPU, memory, disk, or network capacity.",
-            "terms": ("cpu", "memory", "mem", "disk", "network", "throttle", "utilization", "saturation"),
-            "expected": ("high", "increase", "elevated", "throttling", "sustained"),
-            "check": "Inspect resource utilization and throttling for the affected service during the incident window.",
-            "supported": "Sustained high utilization or throttling is observed.",
-            "unsupported": "Resource utilization remains normal while the incident persists.",
+            "expected": (
+                "cpu",
+                "memory",
+                "resource",
+                "utilization",
+                "saturation",
+                "load",
+            ),
+            "service": True,
+            "check": (
+                "Check CPU and memory utilization for the affected "
+                "service during the incident window."
+            ),
         },
         {
             "name": "increased request load",
-            "description": "The incident may be associated with an increase in incoming request volume or throughput.",
-            "terms": ("request", "throughput", "traffic", "rps", "qps", "rate", "volume"),
-            "expected": ("increase", "elevated", "high", "spike"),
-            "check": "Compare request rate/throughput before and during the incident for the affected service.",
-            "supported": "Request volume is elevated in the incident window.",
-            "unsupported": "Request volume is unchanged or lower.",
+            "expected": (
+                "request_rate",
+                "throughput",
+                "traffic",
+                "request rate",
+                "requests increased",
+            ),
+            "service": True,
+            "check": (
+                "Check request rate and throughput for the affected "
+                "service during the incident window."
+            ),
         },
         {
-            "name": "dependency latency or downstream degradation",
-            "description": "A dependency or downstream service may be contributing elevated latency or failures.",
-            "terms": ("latency", "duration", "downstream", "dependency", "upstream", "span", "rpc", "call"),
-            "expected": ("increase", "elevated", "high", "error"),
-            "check": "Inspect downstream calls and their latency/error rates for the affected request path.",
-            "supported": "A downstream call shows elevated latency or errors in the incident window.",
-            "unsupported": "Relevant downstream calls remain normal.",
+            "name": "downstream latency",
+            "expected": (
+                "latency",
+                "response time",
+                "downstream",
+                "dependency",
+                "span latency",
+            ),
+            "service": True,
+            "check": (
+                "Inspect downstream dependency latency and trace spans "
+                "for the affected service."
+            ),
         },
         {
-            "name": "error propagation",
-            "description": "Errors observed across logs or traces may indicate propagation through the request path.",
-            "terms": ("error", "exception", "failure", "failed", "5xx", "statuscode", "warning"),
-            "expected": ("increase", "elevated", "high", "spike"),
-            "check": "Trace the first temporally concentrated error across services and compare upstream/downstream error rates.",
-            "supported": "Error activity increases in a temporally related service or request path.",
-            "unsupported": "Relevant error rates remain normal.",
+            "name": "error or failure increase",
+            "expected": (
+                "error",
+                "errors",
+                "failure",
+                "failures",
+                "error_rate",
+                "status 5",
+            ),
+            "service": True,
+            "check": (
+                "Check error and failure rates for the affected service "
+                "during the incident window."
+            ),
         },
+        {
+            "name": "database or storage pressure",
+            "expected": (
+                "database",
+                "db",
+                "query latency",
+                "disk",
+                "storage",
+                "queue depth",
+                "connection pool",
+            ),
+            "service": True,
+            "check": (
+                "Inspect database, storage, queue-depth, and connection "
+                "pool telemetry for the affected service."
+            ),
+        },
+        {
+            "name": "network or communication issue",
+            "expected": (
+                "network",
+                "connection",
+                "timeout",
+                "packet",
+                "communication",
+                "unreachable",
+            ),
+            "service": True,
+            "check": (
+                "Check network connectivity, timeout signals, and "
+                "communication errors between affected components."
+            ),
+        },
+    ]
+
+    CONTRADICTORY_WORDS = (
+        "decrease",
+        "decreased",
+        "decreasing",
+        "reduced",
+        "reduction",
+        "lower",
+        "lowered",
+        "normal",
+        "stable",
+        "unchanged",
+        "not elevated",
+        "remains normal",
+        "remained normal",
+        "no anomaly",
+        "no relevant anomaly",
     )
 
-    _STRONG = {"strong"}
-    _MODERATE = {"moderate", "medium"}
-    _WEAK = {"weak", "low"}
+    def infer(self, evidence_rows: list[dict[str, Any]]) -> dict[str, Any]:
+        """Generate deterministic competing hypotheses from observations."""
 
-    def infer(self, evidence: Iterable[dict[str, Any]], case_id: str | None = None) -> dict[str, Any]:
-        rows = [self._validate_observation(row) for row in evidence]
-        if case_id is None and rows:
-            case_id = rows[0].get("case_id")
+        self._validate_no_ground_truth_leakage(evidence_rows)
+
+        rows = [dict(row) for row in evidence_rows]
 
         if not rows:
-            return self._empty_result(case_id, "No investigator-visible evidence was supplied.")
+            return {
+                "case_id": None,
+                "status": "insufficient_evidence",
+                "hypotheses": [],
+                "decision": "Insufficient evidence.",
+                "notes": ["No structured evidence was provided."],
+            }
 
-        candidates = []
-        for rule in self._RULES:
-            result = self._evaluate_rule(rule, rows)
-            if result is not None:
-                candidates.append(result)
+        case_ids = {
+            row.get("case_id")
+            for row in rows
+            if row.get("case_id") is not None
+        }
 
-        candidates.sort(
-            key=lambda h: (
-                self._support_value(h),
-                -len(h.contradicting_evidence),
-                h.hypothesis,
-            ),
-            reverse=True,
-        )
-        candidates = candidates[: self._MAX_HYPOTHESES]
+        case_id = next(iter(sorted(case_ids)), None)
 
-        if not candidates:
-            return self._empty_result(
-                case_id,
-                "Observed telemetry does not match a baseline hypothesis rule; insufficient evidence.",
+        candidates: list[dict[str, Any]] = []
+
+        for rule in self.RULES:
+            supporting: list[dict[str, Any]] = []
+            contradicting: list[dict[str, Any]] = []
+            missing: list[dict[str, Any]] = []
+            neutral: list[dict[str, Any]] = []
+
+            services: list[str] = []
+
+            for row in rows:
+                availability = str(
+                    row.get("availability", "available")
+                ).lower()
+
+                observation = str(
+                    row.get("observation", "")
+                ).lower()
+
+                direction = str(
+                    row.get("direction", "")
+                ).lower()
+
+                signal = str(
+                    row.get("signal", "")
+                ).lower()
+
+                source = str(
+                    row.get("source", "")
+                ).lower()
+
+                combined_text = " ".join(
+                    [
+                        observation,
+                        direction,
+                        signal,
+                        source,
+                    ]
+                )
+
+                expected = any(
+                    token.lower() in combined_text
+                    for token in rule["expected"]
+                )
+
+                unavailable = availability in {
+                    "missing",
+                    "unavailable",
+                    "not_available",
+                    "absent",
+                }
+
+                if unavailable:
+                    if expected or self._is_missing_relevant_telemetry(
+                        observation,
+                        signal,
+                        source,
+                    ):
+                        missing.append(self._ref(row))
+                    continue
+
+                is_contradictory = self._is_contradictory(
+                    direction,
+                    observation,
+                )
+
+                if is_contradictory and expected:
+                    contradicting.append(self._ref(row))
+                    continue
+
+                if expected:
+                    strength = str(
+                        row.get(
+                            "evidence_strength",
+                            row.get("strength", "weak"),
+                        )
+                    ).lower()
+
+                    if strength not in {
+                        "contradictory",
+                        "negative",
+                    }:
+                        supporting.append(self._ref(row))
+
+                        service = str(
+                            row.get("service", "")
+                        ).strip()
+
+                        if service:
+                            services.append(service)
+
+                    else:
+                        neutral.append(self._ref(row))
+
+                elif self._is_relevant_neutral_evidence(
+                    row,
+                    rule,
+                ):
+                    neutral.append(self._ref(row))
+
+            if not supporting and not contradicting and not missing:
+                continue
+
+            primary_service = self._choose_service(
+                services,
+                rows,
             )
 
-        self._add_competition_aware_actions(candidates)
-        distinguishable = len(candidates) == 1 or self._support_margin(candidates) >= 0.20
-        status = "hypotheses_available" if distinguishable else "unable_to_distinguish"
+            uncertainty, uncertainty_reasons = (
+                self._calculate_uncertainty(
+                    supporting,
+                    contradicting,
+                    missing,
+                    neutral,
+                )
+            )
+
+            confidence = self._calculate_confidence(
+                supporting,
+                contradicting,
+                missing,
+                neutral,
+            )
+
+            rationale = self._build_rationale(
+                rule["name"],
+                supporting,
+                contradicting,
+                missing,
+                neutral,
+                uncertainty,
+            )
+
+            candidate = {
+                "hypothesis": rule["name"],
+                "primary_service": primary_service,
+                "supporting_evidence": supporting,
+                "contradicting_evidence": contradicting,
+                "missing_evidence": missing,
+                "neutral_evidence": neutral,
+                "uncertainty": uncertainty,
+                "uncertainty_reasons": uncertainty_reasons,
+                "confidence": confidence,
+                "discriminating_checks": [
+                    {
+                        "check": rule["check"],
+                        "reason": (
+                            "This check can provide evidence that "
+                            "distinguishes the hypothesis from alternatives."
+                        ),
+                    }
+                ],
+                "next_diagnostic_action": rule["check"],
+                "rationale": rationale,
+            }
+
+            candidates.append(candidate)
+
+        candidates.sort(
+            key=lambda item: (
+                -float(item.get("confidence", 0.0)),
+                item.get("hypothesis", ""),
+            )
+        )
+
+        if not candidates:
+            return {
+                "case_id": case_id,
+                "status": "insufficient_evidence",
+                "hypotheses": [],
+                "decision": "Insufficient evidence.",
+                "notes": [
+                    "Available observations did not match a supported "
+                    "diagnostic hypothesis."
+                ],
+            }
+
+        if all(
+            h["uncertainty"] == "insufficient_evidence"
+            for h in candidates
+        ):
+            status = "insufficient_evidence"
+        elif len(candidates) > 1:
+            status = "unable_to_distinguish"
+        else:
+            status = "hypotheses_available"
+
+        decision = self._build_decision(
+            candidates,
+            status,
+        )
 
         return {
             "case_id": case_id,
             "status": status,
-            "decision": (
-                "Candidate explanation has comparatively stronger evidence."
-                if distinguishable
-                else "Unable to distinguish between competing hypotheses from current evidence."
+            "hypotheses": candidates,
+            "decision": decision,
+            "notes": self._build_notes(
+                candidates,
+                status,
             ),
-            "hypotheses": [h.to_dict() for h in candidates],
-            "notes": [
-                "Confidence is a deterministic heuristic, not a calibrated probability.",
-                "Temporal association is not treated as causal proof.",
-            ],
         }
 
     def update(
         self,
-        prior: dict[str, Any],
-        new_evidence: Iterable[dict[str, Any]],
+        previous_result: dict[str, Any],
+        new_evidence: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        """Recompute the hypothesis set from prior-visible evidence plus new evidence.
+        """Update hypotheses using previous evidence plus new observations."""
 
-        This is intentionally recomputational rather than stateful: it avoids hidden
-        memory and makes updates reproducible from the complete investigator-visible record.
-        """
-        prior_rows = prior.get("_evidence_snapshot", []) if isinstance(prior, dict) else []
-        combined = list(prior_rows) + list(new_evidence)
-        result = self.infer(combined, case_id=prior.get("case_id") if isinstance(prior, dict) else None)
-        result["_evidence_snapshot"] = combined
-        return result
+        self._validate_no_ground_truth_leakage(new_evidence)
 
-    @staticmethod
-    def _validate_observation(row: dict[str, Any]) -> dict[str, Any]:
-        if not isinstance(row, dict):
-            raise TypeError("Each evidence item must be a dictionary.")
-        forbidden = {"root_cause_service", "fault", "fault_description", "ground_truth", "labels"}
-        if forbidden.intersection(row):
-            raise ValueError("Ground-truth fields are not accepted by the inference path.")
-        required = {"source", "observation"}
-        missing = required.difference(row)
-        if missing:
-            raise ValueError(f"Evidence item missing required fields: {sorted(missing)}")
-        return dict(row)
-
-    def _evaluate_rule(self, rule: dict[str, Any], rows: list[dict[str, Any]]) -> HypothesisResult | None:
-        supporting, contradicting, missing, neutral = [], [], [], []
-        services = defaultdict(float)
-
-        relevant_available = 0
-        for row in rows:
-            text = " ".join(
-                str(row.get(k, "")).lower()
-                for k in ("source", "signal", "observation", "service", "direction")
-            )
-            matched = any(term in text for term in rule["terms"])
-            if not matched:
-                neutral.append(self._ref(row))
-                continue
-
-            availability = str(row.get("availability", "available")).lower()
-            if availability in {"missing", "unavailable", "not_available", "absent"}:
-                missing.append(self._ref(row))
-                continue
-
-            relevant_available += 1
-            direction = str(row.get("direction", "")).lower()
-            observation = str(row.get("observation", "")).lower()
-            expected = any(token in direction or token in observation for token in rule["expected"])
-            strength = str(row.get("evidence_strength", "")).lower()
-
-            explicitly_negative = strength in {"contradictory", "negative"}
-            explicitly_normal = (
-                "normal" in observation
-                or "unchanged" in observation
-                or direction in {"decrease", "decreased", "down", "stable", "unchanged"}
-            )
-
-            if expected and not explicitly_negative:
-                supporting.append(self._ref(row))
-                services[str(row.get("service") or "unknown")] += self._strength_value(strength)
-            elif explicitly_negative or explicitly_normal:
-                contradicting.append(self._ref(row))
-            else:
-                # Relevant evidence can be strong without supporting or
-                # contradicting the current rule. Keep it neutral.
-                neutral.append(self._ref(row))
-
-        if not supporting and not missing and not contradicting:
-            return None
-
-        support = sum(self._strength_value(x["strength"]) for x in supporting)
-        contradiction = sum(self._strength_value(x["strength"]) for x in contradicting)
-        confidence = max(0.0, min(1.0, 0.25 + 0.15 * support - 0.20 * contradiction))
-        uncertainty_reasons = []
-
-        if missing:
-            uncertainty_reasons.append("Relevant telemetry is unavailable.")
-        if contradicting:
-            uncertainty_reasons.append("Some observations conflict with the expected pattern.")
-        if not supporting:
-            uncertainty_reasons.append("No direct supporting observation is available.")
-        if supporting and len(supporting) == 1:
-            uncertainty_reasons.append("Support relies on a single observation.")
-
-        if not uncertainty_reasons:
-            uncertainty = "low"
-        elif contradiction or missing:
-            uncertainty = "high"
-        else:
-            uncertainty = "moderate"
-
-        primary_service = max(services, key=services.get) if services else None
-        return HypothesisResult(
-            hypothesis=rule["name"],
-            primary_service=primary_service,
-            supporting_evidence=supporting,
-            contradicting_evidence=contradicting,
-            missing_evidence=missing,
-            neutral_evidence=neutral,
-            uncertainty=uncertainty,
-            uncertainty_reasons=uncertainty_reasons,
-            confidence=round(confidence, 3),
-            discriminating_checks=[{
-                "check": rule["check"],
-                "expected_if_supported": rule["supported"],
-                "expected_if_unsupported": rule["unsupported"],
-            }],
-            next_diagnostic_action=rule["check"],
+        previous_snapshot = previous_result.get(
+            "_evidence_snapshot",
+            [],
         )
 
-    @staticmethod
-    def _ref(row: dict[str, Any]) -> dict[str, Any]:
-        return {
-            k: row.get(k)
-            for k in (
-                "source", "service", "observation", "direction",
-                "magnitude", "time_context", "evidence_strength",
-                "availability",
-            )
-            if k in row
-        }
+        combined = [
+            dict(row)
+            for row in previous_snapshot
+        ]
+
+        combined.extend(
+            dict(row)
+            for row in new_evidence
+        )
+
+        updated = self.infer(combined)
+
+        updated["_evidence_snapshot"] = combined
+
+        return updated
 
     @classmethod
-    def _strength_value(cls, strength: str) -> float:
-        if strength in cls._STRONG:
-            return 1.0
-        if strength in cls._MODERATE:
-            return 0.7
-        if strength in cls._WEAK:
-            return 0.4
-        return 0.5
+    def _validate_no_ground_truth_leakage(
+        cls,
+        evidence_rows: list[dict[str, Any]],
+    ) -> None:
+        """Reject evaluator-only ground-truth fields."""
 
-    @staticmethod
-    def _support_value(h: HypothesisResult) -> float:
-        return sum(
-            1.0 if x.get("strength") == "strong" else 0.7 if x.get("strength") in {"moderate", "medium"} else 0.4
-            for x in h.supporting_evidence
+        for index, row in enumerate(evidence_rows):
+            forbidden = cls.GROUND_TRUTH_FIELDS.intersection(
+                row.keys()
+            )
+
+            if forbidden:
+                fields = ", ".join(sorted(forbidden))
+                raise ValueError(
+                    "Ground-truth fields are not allowed in "
+                    f"HypothesisEngine input at row {index}: {fields}"
+                )
+
+    @classmethod
+    def _is_contradictory(
+        cls,
+        direction: str,
+        observation: str,
+    ) -> bool:
+        """Detect observations that oppose an expected increase."""
+
+        direction = direction.lower().strip()
+        observation = observation.lower().strip()
+
+        negative_directions = {
+            "decrease",
+            "decreased",
+            "decreasing",
+            "reduced",
+            "reduction",
+            "lower",
+            "lowered",
+            "normal",
+            "stable",
+            "unchanged",
+        }
+
+        if direction in negative_directions:
+            return True
+
+        return any(
+            phrase in observation
+            for phrase in cls.CONTRADICTORY_WORDS
         )
 
     @staticmethod
-    def _support_margin(hypotheses: list[HypothesisResult]) -> float:
-        if len(hypotheses) < 2:
-            return 1.0
-        vals = sorted((HypothesisEngine._support_value(h) for h in hypotheses), reverse=True)
-        return vals[0] - vals[1]
+    def _is_missing_relevant_telemetry(
+        observation: str,
+        signal: str,
+        source: str,
+    ) -> bool:
+        """Detect explicitly unavailable telemetry that is relevant."""
+
+        text = " ".join(
+            [
+                observation.lower(),
+                signal.lower(),
+                source.lower(),
+            ]
+        )
+
+        telemetry_terms = (
+            "trace",
+            "traces",
+            "metric",
+            "metrics",
+            "log",
+            "logs",
+            "telemetry",
+            "latency",
+            "dependency",
+            "request",
+            "error",
+            "cpu",
+            "memory",
+        )
+
+        return any(
+            term in text
+            for term in telemetry_terms
+        )
 
     @staticmethod
-    def _add_competition_aware_actions(hypotheses: list[HypothesisResult]) -> None:
-        if len(hypotheses) < 2:
-            return
-        for h in hypotheses:
-            h.discriminating_checks.append({
-                "check": f"Compare this explanation against: {', '.join(x.hypothesis for x in hypotheses if x is not h)}.",
-                "purpose": "Seek an observation that would separate the competing explanations.",
-            })
+    def _is_relevant_neutral_evidence(
+        row: dict[str, Any],
+        rule: dict[str, Any],
+    ) -> bool:
+        """Identify relevant observations that do not support or contradict."""
+
+        observation = str(
+            row.get("observation", "")
+        ).lower()
+
+        signal = str(
+            row.get("signal", "")
+        ).lower()
+
+        source = str(
+            row.get("source", "")
+        ).lower()
+
+        text = " ".join(
+            [
+                observation,
+                signal,
+                source,
+            ]
+        )
+
+        relevant = any(
+            token.lower() in text
+            for token in rule["expected"]
+        )
+
+        if relevant:
+            return False
+
+        neutral_terms = (
+            "disk",
+            "queue",
+            "network",
+            "database",
+            "storage",
+            "connection",
+            "trace",
+            "latency",
+        )
+
+        return any(
+            term in text
+            for term in neutral_terms
+        )
 
     @staticmethod
-    def _empty_result(case_id: str | None, reason: str) -> dict[str, Any]:
+    def _ref(
+        row: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Create a stable evidence reference."""
+
         return {
-            "case_id": case_id,
-            "status": "insufficient_evidence",
-            "decision": "Insufficient evidence.",
-            "hypotheses": [],
-            "notes": [reason],
+            "evidence_id": row.get("evidence_id"),
+            "source": row.get("source"),
+            "service": row.get("service"),
+            "observation": row.get("observation"),
+            "direction": row.get("direction"),
+            "magnitude": row.get("magnitude"),
+            "time_context": row.get("time_context"),
+            "evidence_strength": row.get(
+                "evidence_strength",
+                row.get("strength", "weak"),
+            ),
+            "availability": row.get(
+                "availability",
+                "available",
+            ),
         }
 
+    @staticmethod
+    def _choose_service(
+        services: list[str],
+        rows: list[dict[str, Any]],
+    ) -> str | None:
+        """Choose a deterministic primary service."""
 
-def infer_hypotheses(evidence: Iterable[dict[str, Any]], case_id: str | None = None) -> dict[str, Any]:
-    """Functional entry point for callers that do not need an engine instance."""
-    return HypothesisEngine().infer(evidence, case_id=case_id)
+        if services:
+            counts: dict[str, int] = {}
+
+            for service in services:
+                counts[service] = counts.get(service, 0) + 1
+
+            return sorted(
+                counts,
+                key=lambda service: (
+                    -counts[service],
+                    service,
+                ),
+            )[0]
+
+        row_services = sorted(
+            {
+                str(row.get("service", "")).strip()
+                for row in rows
+                if str(row.get("service", "")).strip()
+            }
+        )
+
+        return row_services[0] if row_services else None
+
+    @staticmethod
+    def _calculate_uncertainty(
+        supporting: list[dict[str, Any]],
+        contradicting: list[dict[str, Any]],
+        missing: list[dict[str, Any]],
+        neutral: list[dict[str, Any]],
+    ) -> tuple[str, list[str]]:
+        """Assign transparent qualitative uncertainty."""
+
+        reasons: list[str] = []
+
+        if not supporting and not contradicting:
+            if missing:
+                reasons.append(
+                    "Relevant telemetry is unavailable."
+                )
+                return "insufficient_evidence", reasons
+
+            reasons.append(
+                "No directly relevant supporting or contradicting evidence."
+            )
+            return "insufficient_evidence", reasons
+
+        if contradicting:
+            reasons.append(
+                "At least one relevant observation contradicts the hypothesis."
+            )
+
+        if missing:
+            reasons.append(
+                "Some relevant telemetry is unavailable."
+            )
+
+        if supporting:
+            strong_count = sum(
+                1
+                for item in supporting
+                if str(
+                    item.get("evidence_strength", "")
+                ).lower()
+                == "strong"
+            )
+
+            if strong_count:
+                reasons.append(
+                    "Relevant supporting evidence includes strong observations."
+                )
+            else:
+                reasons.append(
+                    "Supporting evidence is present but may require confirmation."
+                )
+
+        if contradicting and supporting:
+            return "high", reasons
+
+        if missing and supporting:
+            return "high", reasons
+
+        if supporting:
+            return "low", reasons
+
+        return "high", reasons
+
+    @staticmethod
+    def _calculate_confidence(
+        supporting: list[dict[str, Any]],
+        contradicting: list[dict[str, Any]],
+        missing: list[dict[str, Any]],
+        neutral: list[dict[str, Any]],
+    ) -> float:
+        """Return a deterministic relative support score, not a probability."""
+
+        if not supporting:
+            return 0.0
+
+        strength_values = {
+            "strong": 1.0,
+            "moderate": 0.7,
+            "weak": 0.4,
+        }
+
+        support_score = sum(
+            strength_values.get(
+                str(
+                    item.get("evidence_strength", "weak")
+                ).lower(),
+                0.4,
+            )
+            for item in supporting
+        )
+
+        contradiction_penalty = 0.5 * len(
+            contradicting
+        )
+
+        missing_penalty = 0.15 * len(
+            missing
+        )
+
+        neutral_penalty = 0.05 * len(
+            neutral
+        )
+
+        score = (
+            support_score
+            - contradiction_penalty
+            - missing_penalty
+            - neutral_penalty
+        )
+
+        return round(
+            max(0.0, min(1.0, score)),
+            3,
+        )
+
+    @staticmethod
+    def _build_rationale(
+        hypothesis: str,
+        supporting: list[dict[str, Any]],
+        contradicting: list[dict[str, Any]],
+        missing: list[dict[str, Any]],
+        neutral: list[dict[str, Any]],
+        uncertainty: str,
+    ) -> str:
+        """Create a transparent explanation for the hypothesis."""
+
+        parts = [
+            f"Hypothesis: {hypothesis}.",
+        ]
+
+        if supporting:
+            parts.append(
+                f"{len(supporting)} observation(s) support the hypothesis."
+            )
+
+        if contradicting:
+            parts.append(
+                f"{len(contradicting)} observation(s) contradict the hypothesis."
+            )
+
+        if missing:
+            parts.append(
+                f"{len(missing)} relevant observation(s) are unavailable."
+            )
+
+        if neutral:
+            parts.append(
+                f"{len(neutral)} observation(s) are relevant but neutral."
+            )
+
+        parts.append(
+            f"Current uncertainty is {uncertainty}."
+        )
+
+        parts.append(
+            "Temporal association is treated as evidence context, "
+            "not as proof of causality."
+        )
+
+        return " ".join(parts)
+
+    @staticmethod
+    def _build_decision(
+        hypotheses: list[dict[str, Any]],
+        status: str,
+    ) -> str:
+        """Create a human-controlled decision-support statement."""
+
+        if status == "insufficient_evidence":
+            return "Insufficient evidence."
+
+        if status == "unable_to_distinguish":
+            return (
+                "Unable to distinguish between competing hypotheses."
+            )
+
+        top = hypotheses[0]
+
+        if top["uncertainty"] in {
+            "high",
+            "insufficient_evidence",
+        }:
+            return (
+                "Current evidence does not justify selecting one "
+                "explanation."
+            )
+
+        return (
+            "Candidate hypothesis with comparatively stronger "
+            "current support."
+        )
+
+    @staticmethod
+    def _build_notes(
+        hypotheses: list[dict[str, Any]],
+        status: str,
+    ) -> list[str]:
+        """Create deterministic notes for downstream evaluation."""
+
+        notes: list[str] = []
+
+        if status == "insufficient_evidence":
+            notes.append(
+                "The engine abstains because available evidence is insufficient."
+            )
+
+        elif status == "unable_to_distinguish":
+            notes.append(
+                "Multiple hypotheses remain plausible under the current evidence."
+            )
+
+        else:
+            notes.append(
+                "A candidate hypothesis has comparatively stronger current support."
+            )
+
+        notes.append(
+            "Hypothesis results are evidence interpretations, not ground-truth labels."
+        )
+
+        notes.append(
+            "Human review is required before any operational action."
+        )
+
+        return notes
+
+
+def infer_hypotheses(
+    evidence_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Convenience wrapper around HypothesisEngine.infer."""
+
+    return HypothesisEngine().infer(evidence_rows)
