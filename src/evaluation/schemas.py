@@ -82,6 +82,7 @@ class GroundTruthRecord:
     correct_action_ids: tuple[str, ...] = ()
     unnecessary_action_ids: tuple[str, ...] = ()
     incorrect_action_ids: tuple[str, ...] = ()
+    condition: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -120,3 +121,4 @@ class EvaluationResult:
     correct_ai_override_count: int
     correct_ai_following_count: int
     workload_score: Optional[float]
+    condition: Optional[str] = None
