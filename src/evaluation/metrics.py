@@ -2,12 +2,7 @@
 from __future__ import annotations
 
 from typing import Iterable, Optional
-from .schemas import (
-    DiagnosticAction,
-    EvaluationResult,
-    GroundTruthRecord,
-    ParticipantTrialRecord,
-)
+from .schemas import EvaluationResult, GroundTruthRecord, ParticipantTrialRecord
 
 
 def _norm(value: str) -> str:
@@ -29,7 +24,7 @@ def _first_timestamp_for_hypothesis(
     correct = {_norm(x) for x in truth.correct_diagnoses}
     for event in sorted(trial.decision_events, key=lambda e: e.timestamp_s):
         if event.hypothesis and _norm(event.hypothesis) in correct:
-            return event.timestamp_s
+            return max(0.0, event.timestamp_s)
     return None
 
 
@@ -39,39 +34,35 @@ def _first_timestamp_for_action(
     correct = set(truth.correct_action_ids)
     for event in sorted(trial.decision_events, key=lambda e: e.timestamp_s):
         if event.action_id in correct:
-            return event.timestamp_s
+            return max(0.0, event.timestamp_s)
     return None
 
 
 def time_to_correct_hypothesis(
     trial: ParticipantTrialRecord, truth: GroundTruthRecord
 ) -> Optional[float]:
-    timestamp = _first_timestamp_for_hypothesis(trial, truth)
-    if timestamp is None:
-        return None
-    return max(0.0, timestamp)
+    return _first_timestamp_for_hypothesis(trial, truth)
 
 
 def time_to_correct_action(
     trial: ParticipantTrialRecord, truth: GroundTruthRecord
 ) -> Optional[float]:
-    timestamp = _first_timestamp_for_action(trial, truth)
-    if timestamp is None:
-        return None
-    return max(0.0, timestamp)
+    return _first_timestamp_for_action(trial, truth)
 
 
 def action_counts(
     trial: ParticipantTrialRecord, truth: GroundTruthRecord
 ) -> tuple[int, int]:
     ids = [a.action_id for a in trial.diagnostic_actions]
-    unnecessary = sum(x in set(truth.unnecessary_action_ids) for x in ids)
-    incorrect = sum(x in set(truth.incorrect_action_ids) for x in ids)
-    return unnecessary, incorrect
+    unnecessary_ids = set(truth.unnecessary_action_ids)
+    incorrect_ids = set(truth.incorrect_action_ids)
+    return (
+        sum(x in unnecessary_ids for x in ids),
+        sum(x in incorrect_ids for x in ids),
+    )
 
 
 def verification_time(trial: ParticipantTrialRecord) -> Optional[float]:
-    """Return elapsed time spent on explicitly recorded verification events."""
     times = [
         e.timestamp_s
         for e in trial.decision_events
@@ -86,24 +77,27 @@ def _ai_metrics(
     trial: ParticipantTrialRecord,
     truth: GroundTruthRecord,
 ) -> tuple[Optional[float], Optional[float], int, int, int]:
-    recommendations = trial.ai_recommendations
-    if trial.mode is ParticipantTrialRecord.__dataclass_fields__["mode"].type:  # pragma: no cover
-        pass
+    recommendations = list(trial.ai_recommendations)
     if not recommendations:
         return None, None, 0, 0, 0
 
-    rec_ids = list(recommendations)
     followed = set(trial.actions_followed)
     overridden = set(trial.actions_overridden)
     correct = set(truth.correct_action_ids)
     incorrect = set(truth.incorrect_action_ids)
 
-    followed_count = sum(x in followed for x in rec_ids)
-    overridden_count = sum(x in overridden for x in rec_ids)
-    incorrect_following = sum(x in followed and x in incorrect for x in rec_ids)
-    correct_override = sum(x in overridden and x in incorrect for x in rec_ids)
-    correct_following = sum(x in followed and x in correct for x in rec_ids)
-    total = len(rec_ids)
+    followed_count = sum(x in followed for x in recommendations)
+    overridden_count = sum(x in overridden for x in recommendations)
+    incorrect_following = sum(
+        x in followed and x in incorrect for x in recommendations
+    )
+    correct_override = sum(
+        x in overridden and x in incorrect for x in recommendations
+    )
+    correct_following = sum(
+        x in followed and x in correct for x in recommendations
+    )
+    total = len(recommendations)
 
     return (
         followed_count / total,
@@ -118,7 +112,9 @@ def evaluate_trial(
     trial: ParticipantTrialRecord, truth: GroundTruthRecord
 ) -> EvaluationResult:
     unnecessary, incorrect = action_counts(trial, truth)
-    follow, override, bad_follow, good_override, good_follow = _ai_metrics(trial, truth)
+    follow, override, bad_follow, good_override, good_follow = _ai_metrics(
+        trial, truth
+    )
     return EvaluationResult(
         trial_id=trial.trial_id,
         diagnosis_correct=diagnosis_correct(trial.final_diagnosis, truth),
@@ -128,15 +124,21 @@ def evaluate_trial(
         incorrect_action_count=incorrect,
         verification_time_s=verification_time(trial),
         confidence=trial.confidence,
+        confidence_error=confidence_error(
+            trial.confidence, diagnosis_correct(trial.final_diagnosis, truth)
+        ),
         ai_following_rate=follow,
         ai_override_rate=override,
         incorrect_ai_following_count=bad_follow,
         correct_ai_override_count=good_override,
         correct_ai_following_count=good_follow,
+        workload_score=trial.workload_score,
     )
 
 
-def confidence_error(confidence: Optional[float], correct: Optional[bool]) -> Optional[float]:
+def confidence_error(
+    confidence: Optional[float], correct: Optional[bool]
+) -> Optional[float]:
     if confidence is None or correct is None:
         return None
     return abs(confidence / 100.0 - float(correct))
