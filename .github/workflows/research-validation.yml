@@ -20,3 +20,6 @@ jobs:
           python -m py_compile experiments/make_participant_assignment.py
           python -m py_compile experiments/score_human_study.py
           python -m py_compile experiments/study_server.py
+          python -m py_compile experiments/deployment_smoke.py
+      - name: Deployment smoke test
+        run: python experiments/deployment_smoke.py
