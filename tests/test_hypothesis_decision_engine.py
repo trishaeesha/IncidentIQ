@@ -209,3 +209,24 @@ def test_decision_abstains_on_high_uncertainty():
     }
     decision = DecisionEngine().decide(inference)
     assert decision["selected_hypothesis"] is None
+
+
+def test_strong_relevant_evidence_without_expected_pattern_is_neutral():
+    result = HypothesisEngine().infer([evidence(
+        observation="CPU utilization was high but remained stable throughout the window.",
+        direction="stable",
+        evidence_strength="strong",
+    )])
+    h = next(h for h in result["hypotheses"] if h["hypothesis"] == "resource saturation")
+    assert not h["supporting_evidence"]
+    assert h["contradicting_evidence"]
+
+
+def test_decreased_resource_signal_contradicts_saturation():
+    result = HypothesisEngine().infer([evidence(
+        observation="CPU utilization decreased during the incident.",
+        direction="decrease",
+        evidence_strength="strong",
+    )])
+    h = next(h for h in result["hypotheses"] if h["hypothesis"] == "resource saturation")
+    assert h["contradicting_evidence"]
