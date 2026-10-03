@@ -104,6 +104,7 @@ def main() -> None:
         "hypotheses": [
             {
                 "hypothesis": item.get("hypothesis"),
+                "primary_service": item.get("primary_service"),
                 "confidence": item.get("confidence"),
                 "uncertainty": item.get("uncertainty"),
                 "supporting_count": len(item.get("supporting_evidence", [])),
