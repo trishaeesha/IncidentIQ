@@ -1,0 +1,5 @@
+[
+ {"case_id":"re2ob_checkoutservice_cpu_2","mode":"human_only","incident":"A checkout service incident has been detected. Review the supplied telemetry and state your diagnosis."},
+ {"case_id":"re2ob_checkoutservice_mem_2","mode":"generic_ai","incident":"A checkout service incident has been detected. Review the supplied telemetry and state your diagnosis."},
+ {"case_id":"re2ss_user_loss_1","mode":"incidentiq","incident":"A user-service incident has been detected. Review the supplied telemetry and state your diagnosis."}
+]
