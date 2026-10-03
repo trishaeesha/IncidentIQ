@@ -216,6 +216,12 @@ def extract_log_evidence(
         return []
 
     ts = pd.to_numeric(df[time_col], errors="coerce")
+    # Normalize high-resolution epoch timestamps to epoch seconds.
+    numeric_max = ts.dropna().abs().max() if not ts.dropna().empty else 0
+    if numeric_max > 1e14:
+        ts = ts / 1e6
+    elif numeric_max > 1e11:
+        ts = ts / 1e3
     valid = ts.notna()
     before = df[valid & (ts < float(injection_time))]
     after = df[valid & (ts >= float(injection_time))]
@@ -343,7 +349,13 @@ def extract_trace_evidence(
     if df is None or df.empty:
         return []
 
-    time_col = _trace_column(df, ("time", "timestamp", "starttime", "start_time"))
+    # RCAEval traces expose a relative string `time` (e.g. 00:17) and
+    # an epoch-like numeric `startTime`/`startTimeMillis`. Prefer the numeric
+    # start timestamp so it can be aligned with inject_time (epoch seconds).
+    time_col = _trace_column(
+        df,
+        ("starttime", "start_time", "starttimemillis", "timestamp", "time"),
+    )
     duration_col = _trace_column(df, ("duration", "duration_ms"))
     service_col = _trace_column(df, ("servicename", "service_name", "service"))
     operation_col = _trace_column(
