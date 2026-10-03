@@ -12,7 +12,7 @@ class EvidenceRef:
     service: str | None
     observation: str
     strength: str
-    time_context: str | None = None
+    time_context: dict[str, Any] | None = None
     availability: str = "available"
     evidence_id: str | None = None
 
