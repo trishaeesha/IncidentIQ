@@ -90,7 +90,7 @@ def build_generic_ai_record(
     The caller is responsible for supplying exactly the evidence available to
     the participant. No IncidentIQ structured interpretation is accepted here.
     """
-    record = {
+    # Generic-AI input is allowed to contain raw observations, but never the\n    # evaluator condition or IncidentIQ interpretation fields.\n    for item in input_evidence:\n        if not isinstance(item, Mapping):\n            continue\n        forbidden = {\n            "supporting_evidence", "contradicting_evidence", "missing_evidence",\n            "uncertainty", "confidence", "hypothesis", "hypotheses",\n            "selected_hypothesis", "condition", "condition_rationale",\n            "root_cause_service", "fault", "fault_description", "ground_truth",\n        } & {str(k).lower() for k in item.keys()}\n        if forbidden:\n            raise ValueError("Generic-AI baseline received IncidentIQ/evaluator fields: " + ", ".join(sorted(forbidden)))\n\n    record = {
         "trial_id": trial_id,
         "model": model,
         "model_version": model_version,
