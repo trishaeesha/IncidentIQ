@@ -29,6 +29,9 @@ jobs:
       - name: Validate evaluation framework
         run: python experiments/self_test.py
 
+      - name: Validate deployment module
+        run: pytest -q tests/test_api.py tests/test_rcaeval_trace_schema.py
+
       - name: Checkout
         uses: actions/checkout@v4
 
