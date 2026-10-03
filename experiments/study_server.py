@@ -1,7 +1,8 @@
 """Dependency-free participant study server.
 
-Only a generated participant-safe manifest is served. Ground truth and gray-area
-labels must remain in researcher-only files.
+Only a generated participant assignment is served. It must contain an opaque
+TRIAL identifier and participant_id; condition labels and evaluator truth are
+never accepted from the browser.
 """
 from __future__ import annotations
 import json
@@ -15,11 +16,18 @@ MANIFEST=ROOT/"study_manifest_participant.json"
 HTML=ROOT/"study.html"
 
 if not MANIFEST.exists():
-    raise SystemExit("Missing study_manifest_participant.json. Build and validate the study manifest first.")
+    raise SystemExit("Missing study_manifest_participant.json. Build the researcher manifest and create a participant assignment first.")
 
 TRIALS=json.loads(MANIFEST.read_text(encoding="utf-8"))
-if not TRIALS.get("participant_safe"):
-    raise SystemExit("Participant manifest is not marked participant_safe.")
+if not TRIALS.get("participant_safe") or not TRIALS.get("participant_id"):
+    raise SystemExit("Participant assignment is missing participant_safe or participant_id.")
+
+for trial in TRIALS.get("trials", []):
+    trial_id=str(trial.get("trial_id",""))
+    if not trial_id.startswith("TRIAL-"):
+        raise SystemExit("Participant assignment contains a non-opaque trial ID.")
+    if "condition" in trial or "condition_rationale" in trial:
+        raise SystemExit("Participant assignment leaks experimental condition metadata.")
 
 class Handler(BaseHTTPRequestHandler):
     def send_json(self,status,payload):
@@ -50,6 +58,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(404,{"error":"not found"})
         length=int(self.headers.get("Content-Length","0"))
         payload=json.loads(self.rfile.read(length))
+        if payload.get("participant_id") != TRIALS["participant_id"]:
+            return self.send_json(400,{"error":"participant mismatch"})
+        allowed={"trial_id","participant_id","public_case_id","mode","start_time","end_time",
+                 "elapsed_seconds","final_diagnosis","confidence","diagnostic_actions",
+                 "decision_events","workload_score"}
+        payload={k:v for k,v in payload.items() if k in allowed}
         payload["server_received_at"]=time.time()
         payload["record_id"]=uuid.uuid4().hex
         Path("participant_results").mkdir(exist_ok=True)
