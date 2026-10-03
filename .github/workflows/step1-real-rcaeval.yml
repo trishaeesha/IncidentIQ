@@ -71,6 +71,9 @@ jobs:
                   df = pd.read_parquet(p)
                   print(name, "columns=", list(df.columns))
                   print(name, "rows=", len(df))
+                  for col in ("time","timestamp","startTime","start_time"):
+                      if col in df.columns:
+                          print(name, col, "min=", df[col].min(), "max=", df[col].max(), "dtype=", df[col].dtype)
           PY
 
       - name: Run real RCAEval case
