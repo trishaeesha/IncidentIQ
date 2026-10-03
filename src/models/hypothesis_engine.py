@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .contextual_relation import relate
+
 
 class HypothesisEngine:
     """Interpret structured evidence into competing diagnostic hypotheses."""
@@ -197,6 +199,8 @@ class HypothesisEngine:
                     token.lower() in combined_text
                     for token in rule["expected"]
                 )
+                if not expected and relate(row, rule["name"]) == "supporting":
+                    expected = True
 
                 unavailable = availability in {
                     "missing",
