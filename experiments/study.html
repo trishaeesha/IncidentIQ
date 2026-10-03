@@ -1,14 +1,83 @@
-<!doctype html><html><head><meta charset="utf-8"><title>IncidentIQ Study</title>
-<style>body{font-family:system-ui;max-width:900px;margin:40px auto;padding:0 20px}button{padding:10px 16px;margin:6px}pre{white-space:pre-wrap;background:#f5f5f5;padding:16px;border-radius:8px}.meta{color:#666}</style></head>
-<body><h1>Incident Investigation Study</h1><p class="meta">Participant-facing prototype. Do not enter names, passwords, or other sensitive data.</p>
-<div id="case"></div><textarea id="answer" rows="6" style="width:100%" placeholder="Your diagnosis and reasoning"></textarea><br>
-<label>Confidence <input id="confidence" type="number" min="0" max="100" value="50"></label><br>
-<button onclick="submitTrial()">Submit decision</button><pre id="status"></pre>
+<!doctype html>
+<html><head><meta charset="utf-8"><title>IncidentIQ Study</title>
+<style>
+body{font-family:system-ui;max-width:1000px;margin:32px auto;padding:0 20px}
+pre{white-space:pre-wrap;background:#f5f5f5;padding:14px;border-radius:8px}
+button{padding:10px 16px;margin-top:10px}
+label{display:block;margin:10px 0}
+textarea{width:100%;min-height:100px}
+.meta{color:#666}
+</style></head>
+<body>
+<h1>Incident Investigation Study</h1>
+<p class="meta">Participant interface. Do not enter names, passwords, or other sensitive information.</p>
+<div id="case"></div>
+<textarea id="answer" placeholder="State your diagnosis and reasoning"></textarea>
+<label>Confidence (0-100): <input id="confidence" type="number" min="0" max="100" value="50"></label>
+<textarea id="action" placeholder="What diagnostic action would you take next?"></textarea>
+<label>Workload (1-7): <input id="workload" type="number" min="1" max="7" value="4"></label>
+<button onclick="submitTrial()">Submit decision</button>
+<pre id="status"></pre>
 <script>
-let trials=[],i=0,start=Date.now(),participant=crypto.randomUUID();
-async function init(){trials=await (await fetch('/api/trials')).json();render()}
-function render(){const t=trials[i];document.getElementById('case').innerHTML='<h2>Incident '+(i+1)+' / '+trials.length+'</h2><pre>'+escapeHtml(JSON.stringify(t,null,2))+'</pre>';start=Date.now()}
-function escapeHtml(s){return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}
-async function submitTrial(){const t=trials[i];const payload={participant_id:participant,case_id:t.case_id,mode:t.mode,start_time:new Date(start).toISOString(),end_time:new Date().toISOString(),final_diagnosis:document.getElementById('answer').value,confidence:Number(document.getElementById('confidence').value),decision_events:[{timestamp_s:(Date.now()-start)/1000,event_type:'final_decision',hypothesis:document.getElementById('answer').value,confidence:Number(document.getElementById('confidence').value)}]};await fetch('/api/trial',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});i++;document.getElementById('answer').value='';if(i<trials.length)render();else document.getElementById('status').textContent='Study session complete.'}
+let manifest=null, index=0, started=Date.now();
+const participant=crypto.randomUUID();
+
+async function init(){
+  manifest=await (await fetch('/api/trials')).json();
+  render();
+}
+function escapeHtml(value){
+  return String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+}
+function render(){
+  const t=manifest.trials[index];
+  started=Date.now();
+  let html='<h2>Incident '+(index+1)+' / '+manifest.trial_count+'</h2>';
+  html+='<p><b>Assistance mode:</b> '+escapeHtml(t.mode)+'</p>';
+  html+='<p>'+escapeHtml(t.instructions)+'</p>';
+  html+='<h3>Available telemetry</h3><pre>'+escapeHtml(JSON.stringify(t.evidence,null,2))+'</pre>';
+  document.getElementById('case').innerHTML=html;
+}
+async function submitTrial(){
+  const t=manifest.trials[index];
+  const elapsed=(Date.now()-started)/1000;
+  const payload={
+    trial_id:t.trial_id,
+    participant_id:participant,
+    public_case_id:t.public_case_id,
+    mode:t.mode,
+    start_time:new Date(started).toISOString(),
+    end_time:new Date().toISOString(),
+    elapsed_seconds:elapsed,
+    final_diagnosis:document.getElementById('answer').value,
+    confidence:Number(document.getElementById('confidence').value),
+    diagnostic_actions:[{
+      action_id:'participant-next-action',
+      action_type:'diagnostic_check',
+      target:null,
+      rationale:document.getElementById('action').value,
+      timestamp_s:elapsed
+    }],
+    decision_events:[{
+      timestamp_s:elapsed,
+      event_type:'final_decision',
+      hypothesis:document.getElementById('answer').value,
+      action_id:'participant-next-action',
+      confidence:Number(document.getElementById('confidence').value)
+    }],
+    workload_score:Number(document.getElementById('workload').value)
+  };
+  await fetch('/api/trial',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+  index++;
+  document.getElementById('answer').value='';
+  document.getElementById('action').value='';
+  if(index<manifest.trial_count) render();
+  else document.getElementById('status').textContent='Study session complete.';
+}
 init();
-</script></body></html>
+</script>
+</body></html>
