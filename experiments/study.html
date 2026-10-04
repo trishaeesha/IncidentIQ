@@ -19,67 +19,40 @@ textarea{width:100%;min-height:100px}
 <button onclick="submitTrial()">Submit decision</button>
 <pre id="status"></pre>
 <script>
-let manifest=null, index=0, started=Date.now();
-const participant=crypto.randomUUID();
-
+let manifest=null,index=0,started=Date.now(),participant=null;
 async function init(){
   manifest=await (await fetch('/api/trials')).json();
+  participant=manifest.participant_id;
   render();
 }
-function escapeHtml(value){
-  return String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
-}
+function escapeHtml(value){return String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');}
 function render(){
   const t=manifest.trials[index];
   started=Date.now();
   let html='<h2>Incident '+(index+1)+' / '+manifest.trial_count+'</h2>';
-  html+='<p><b>Assistance mode:</b> '+escapeHtml(t.mode)+'</p>';
-  if(t.assistance){
-    html+='<h3>AI assistance</h3><pre>'+escapeHtml(JSON.stringify(t.assistance,null,2))+'</pre>';
-  }
+  if(t.assistance){html+='<h3>AI assistance</h3><pre>'+escapeHtml(JSON.stringify(t.assistance,null,2))+'</pre>';}
   html+='<p>'+escapeHtml(t.instructions)+'</p>';
   html+='<h3>Available telemetry</h3><pre>'+escapeHtml(JSON.stringify(t.evidence,null,2))+'</pre>';
   document.getElementById('case').innerHTML=html;
 }
 async function submitTrial(){
-  const t=manifest.trials[index];
-  const elapsed=(Date.now()-started)/1000;
+  const t=manifest.trials[index],elapsed=(Date.now()-started)/1000;
   const payload={
-    trial_id:t.trial_id,
-    participant_id:participant,
-    public_case_id:t.public_case_id,
-    mode:t.mode,
-    start_time:new Date(started).toISOString(),
-    end_time:new Date().toISOString(),
-    elapsed_seconds:elapsed,
-    final_diagnosis:document.getElementById('answer').value,
-    confidence:Number(document.getElementById('confidence').value),
-    diagnostic_actions:[{
-      action_id:'participant-next-action',
-      action_type:'diagnostic_check',
-      target:null,
-      rationale:document.getElementById('action').value,
-      timestamp_s:elapsed
-    }],
-    decision_events:[{
-      timestamp_s:elapsed,
-      event_type:'final_decision',
-      hypothesis:document.getElementById('answer').value,
-      action_id:'participant-next-action',
-      confidence:Number(document.getElementById('confidence').value)
-    }],
-    workload_score:Number(document.getElementById('workload').value)
+    trial_id:t.trial_id,participant_id:participant,public_case_id:t.public_case_id,mode:t.mode,
+    start_time:new Date(started).toISOString(),end_time:new Date().toISOString(),elapsed_seconds:elapsed,
+    final_diagnosis:document.getElementById('answer').value,confidence:Number(document.getElementById('confidence').value),
+    diagnostic_actions:[{action_id:'participant-next-action',action_type:'diagnostic_check',target:null,rationale:document.getElementById('action').value,timestamp_s:elapsed}],
+    decision_events:[{timestamp_s:elapsed,event_type:'final_decision',hypothesis:document.getElementById('answer').value,action_id:'participant-next-action',confidence:Number(document.getElementById('confidence').value)}],
+    workload_score:Number(document.getElementById('workload').value),actions_followed:null,actions_overridden:null
   };
-  await fetch('/api/trial',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(payload)
-  });
-  index++;
-  document.getElementById('answer').value='';
-  document.getElementById('action').value='';
-  if(index<manifest.trial_count) render();
-  else document.getElementById('status').textContent='Study session complete.';
+  if(t.assistance){
+    const influence=prompt('If AI assistance was shown, did it influence your final decision? Enter F for followed, O for overridden, or leave blank.');
+    payload.actions_followed=influence?.trim().toUpperCase()==='F';
+    payload.actions_overridden=influence?.trim().toUpperCase()==='O';
+  }
+  await fetch('/api/trial',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  index++;document.getElementById('answer').value='';document.getElementById('action').value='';
+  if(index<manifest.trial_count) render();else document.getElementById('status').textContent='Study session complete.';
 }
 init();
 </script>
