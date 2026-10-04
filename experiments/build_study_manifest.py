@@ -28,36 +28,58 @@ def family(row):
         if any(t in text for t in tokens): return name
     return "other"
 
-def transform(rows,condition):
+def _ref_matches(ref, row):
+    parts=str(ref).split(":")
+    source=str(row.get("source",""))
+    service=str(row.get("service") or "")
+    signal=str(row.get("signal") or "")
+    if len(parts)==2:
+        return source==parts[0] and signal.lower()==parts[1].lower()
+    if len(parts)==3:
+        rs,rv,rg=parts
+        if source!=rs or service.lower()!=rv.lower():
+            return False
+        if source=="metrics":
+            return signal.lower() in {rg.lower(), f"{rv.lower()}_{rg.lower()}"}
+        return signal.lower()==rg.lower()
+    return False
+
+def transform(rows,condition,resolved_refs=()):
     rows=[sanitize(r) for r in rows]
-    if condition=="clear": return rows,"VALIDATED",["full available evidence"]
+    if condition=="clear":
+        return rows,"VALIDATED",["full available evidence"]
     if condition=="ambiguous":
-        if len({family(r) for r in rows if family(r)!="other"})<2:
-            return rows,"UNVALIDATED",["fewer than two evidence families"]
-        return rows,"VALIDATED",["multiple evidence families retained"]
+        selected=[r for r in rows if any(_ref_matches(ref,r) for ref in resolved_refs)]
+        if len(selected)<2:
+            return rows,"UNVALIDATED",["validated ambiguous refs did not resolve to at least two observations"]
+        return selected,"VALIDATED",["validated competing evidence references retained"]
     if condition=="conflicting":
-        directions={str(r.get("direction","")).lower() for r in rows}
-        pos=bool(directions & {"increase","increased","elevated"})
-        neg=bool(directions & {"decrease","decreased","normal","stable","unchanged"})
-        sources={str(r.get("source","")) for r in rows}
-        if len(sources)<2 or not(pos and neg):
-            return rows,"UNVALIDATED",["opposing cross-source signals not demonstrated"]
-        return rows,"VALIDATED",["competing directional signals retained"]
+        selected=[r for r in rows if any(_ref_matches(ref,r) for ref in resolved_refs)]
+        if len(selected)<2:
+            return rows,"UNVALIDATED",["validated conflicting refs did not resolve"]
+        return selected,"VALIDATED",["validated opposing cross-source evidence retained"]
     if condition=="incomplete":
-        # Incomplete represents a genuinely unavailable telemetry modality.
-        # Do not manufacture incompleteness by deleting an arbitrary source.
-        return rows,"VALIDATED",["preserve all available evidence; missing modality is represented by case metadata"]
-    if condition=="misleading": return rows,"UNVALIDATED",["requires researcher-verified unrelated distractor"]
-    if condition=="novel": return rows,"UNVALIDATED",["requires verified historical-reference removal"]
+        return rows,"VALIDATED",["preserve all available evidence; missing modality is genuine"]
+    if condition=="misleading":
+        distractors=[r for r in rows if any(_ref_matches(ref,r) for ref in resolved_refs)]
+        remainder=[r for r in rows if r not in distractors]
+        if not distractors:
+            return rows,"UNVALIDATED",["validated distractor ref did not resolve"]
+        return distractors+remainder,"VALIDATED",["validated distractor is presented first; remaining available evidence is preserved"]
+    if condition=="novel":
+        return rows,"UNVALIDATED",["requires verified historical-reference removal"]
     raise ValueError(condition)
 
-def load_validated_conditions(path):
+def load_validation(path):
     payload=json.loads(Path(path).read_text(encoding="utf-8"))
-    return {
-        (row["case_id"], row["condition"])
-        for row in payload.get("candidates", [])
-        if row.get("status")=="VALIDATED" and row.get("telemetry_verified") is True
-    }
+    validated=set()
+    refs={}
+    for row in payload.get("candidates", []):
+        key=(row["case_id"],row["condition"])
+        if row.get("status")=="VALIDATED" and row.get("telemetry_verified") is True:
+            validated.add(key)
+            refs[key]=tuple(row.get("resolved_evidence_refs",[]))
+    return validated,refs
 
 def main():
     p=argparse.ArgumentParser()
@@ -69,18 +91,18 @@ def main():
     p.add_argument("--participant-pool-out",required=True)
     a=p.parse_args()
 
-    validated_conditions=load_validated_conditions(a.telemetry_validation)
+    validated_conditions,validated_refs=load_validation(a.telemetry_validation)
     records=[]
     for path in sorted(Path(a.outputs).glob("*.json")):
         data=json.loads(path.read_text(encoding="utf-8"))
         if data.get("case_id") and data.get("evidence_digest"): records.append(data)
 
-    researcher=[]; pool=[]; pool_index=0
+    researcher=[]; pool=[]; researcher_pool=[]; pool_index=0
     for case_index,data in enumerate(records,1):
         public_case=f"CASE-{case_index:02d}"
         raw_case=data["case_id"]
         for condition in CONDITIONS:
-            evidence,status,notes=transform(data["evidence_digest"],condition)
+            evidence,status,notes=transform(data["evidence_digest"],condition,validated_refs.get((raw_case,condition),()))
             raw_status=status
             if (raw_case, condition) not in validated_conditions:
                 status="UNVALIDATED"
@@ -97,23 +119,22 @@ def main():
                         "mode":mode,"evidence":evidence,
                         "instructions":"Review the telemetry. State your diagnosis, confidence, and diagnostic action."})
 
-    researcher_pool = []
-    for case_index, data in enumerate(records, 1):
-        public_case = f"CASE-{case_index:02d}"
-        raw_case = data["case_id"]
+    for case_index,data in enumerate(records,1):
+        public_case=f"CASE-{case_index:02d}"
+        raw_case=data["case_id"]
         for condition in CONDITIONS:
-            if (raw_case, condition) not in validated_conditions:
+            if (raw_case,condition) not in validated_conditions:
                 continue
-            evidence = data["evidence_digest"]
+            evidence,_,_=transform(data["evidence_digest"],condition,validated_refs.get((raw_case,condition),()))
             for mode in MODES:
                 researcher_pool.append({
-                    "trial_id": f"RESEARCH-{len(researcher_pool)+1:04d}",
-                    "public_case_id": public_case,
-                    "source_case_id": raw_case,
-                    "condition_key": condition,
-                    "mode": mode,
-                    "evidence": evidence,
-                    "instructions": "Review the telemetry. State your diagnosis, confidence, and diagnostic action.",
+                    "trial_id":f"RESEARCH-{len(researcher_pool)+1:04d}",
+                    "public_case_id":public_case,
+                    "source_case_id":raw_case,
+                    "condition_key":condition,
+                    "mode":mode,
+                    "evidence":evidence,
+                    "instructions":"Review the telemetry. State your diagnosis, confidence, and diagnostic action.",
                 })
 
     Path(a.researcher_out).write_text(
