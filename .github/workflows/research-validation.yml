@@ -32,6 +32,7 @@ jobs:
           python -m py_compile experiments/study_server.py
           python -m py_compile experiments/deployment_smoke.py
           python -m py_compile experiments/prototype_server.py
+          python -m py_compile experiments/build_research_report.py
           python experiments/prototype_server.py > /tmp/incidentiq-prototype.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID' EXIT
