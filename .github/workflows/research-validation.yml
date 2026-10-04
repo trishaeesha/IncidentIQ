@@ -1,4 +1,5 @@
 name: research-validation
+# Raw evidence profiling is researcher-only and never participant-facing.
 on:
   push:
     branches:
