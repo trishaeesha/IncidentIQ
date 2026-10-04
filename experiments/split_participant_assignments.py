@@ -16,10 +16,13 @@ def main():
         for trial in participant.get("trials",[]):
             leaked=FORBIDDEN.intersection(trial)
             if leaked: raise ValueError(f"leakage for {participant['participant_id']}: {sorted(leaked)}")
+        safe_trials=[]
+        for trial in participant.get("trials",[]):
+            safe_trials.append({k:v for k,v in trial.items() if k!="mode"})
         payload={"schema_version":1,"participant_safe":True,
                  "participant_id":participant["participant_id"],
-                 "trial_count":len(participant["trials"]),
-                 "trials":participant["trials"]}
+                 "trial_count":len(safe_trials),
+                 "trials":safe_trials}
         (out/f"{participant['participant_id']}.json").write_text(json.dumps(payload,indent=2),encoding="utf-8")
     print(json.dumps({"participants":len(data.get("participants",[])),"out_dir":str(out)},indent=2))
 if __name__=="__main__": main()
