@@ -40,6 +40,7 @@ def main():
                 "public_case_id":chosen["public_case_id"],
                 "mode":chosen["mode"],
                 "evidence":chosen["evidence"],
+                "assistance":chosen.get("assistance"),
                 "instructions":chosen["instructions"],
             })
         assignments.append({"participant_id":participant_id,"trial_count":len(rows),"trials":rows})
