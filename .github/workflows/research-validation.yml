@@ -39,17 +39,7 @@ jobs:
           trap "kill $SERVER_PID" EXIT
           sleep 2
           if ! kill -0 $SERVER_PID 2>/dev/null; then cat /tmp/incidentiq-prototype.log; exit 1; fi
-          python - <<'PY
-          import json, urllib.request
-          health=json.load(urllib.request.urlopen("http://127.0.0.1:8010/api/health"))
-          assert health["status"]=="ok"
-          cases=json.load(urllib.request.urlopen("http://127.0.0.1:8010/api/cases"))
-          assert len(cases["cases"])==5
-          result=json.load(urllib.request.urlopen("http://127.0.0.1:8010/api/investigate/CASE-02"))
-          assert result["research_integrity"]["ground_truth_in_pipeline"] is False
-          assert result["decision"]["human_control_required"] is True
-          print("prototype smoke test passed")
-          PY
+          python -c "import json, urllib.request; health=json.load(urllib.request.urlopen(\"http://127.0.0.1:8010/api/health\")); assert health[\"status\"]==\"ok\"; cases=json.load(urllib.request.urlopen(\"http://127.0.0.1:8010/api/cases\")); assert len(cases[\"cases\"])==5; result=json.load(urllib.request.urlopen(\"http://127.0.0.1:8010/api/investigate/CASE-02\")); assert result[\"research_integrity\"][\"ground_truth_in_pipeline\"] is False; assert result[\"decision\"][\"human_control_required\"] is True; print(\"prototype smoke test passed\")"
 
   telemetry-validation:
     runs-on: ubuntu-latest
