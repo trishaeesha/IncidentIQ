@@ -75,7 +75,7 @@ def main():
             }}
     out=Path(a.out); out.parent.mkdir(parents=True,exist_ok=True)
     out.write_text(json.dumps(report,indent=2),encoding="utf-8")
-    print(json.dumps({"valid":not errors,"errors":len(errors),"participants":len(participants),"cells":len(observed)},indent=2))
+    print(json.dumps({"valid":not errors,"errors":len(errors),"participants":len(participants),"cells":len(observed),"error_details":errors},indent=2))
     if errors: raise SystemExit(1)
 
 if __name__=="__main__": main()
