@@ -25,6 +25,7 @@ jobs:
           python -m py_compile experiments/validate_gray_area_telemetry.py
           python -m py_compile experiments/profile_gray_area_evidence.py
           python -m py_compile experiments/build_study_assistance.py
+          python -m py_compile experiments/analyze_human_study.py
           python -m py_compile experiments/validate_cohort_assignments.py
           python -m py_compile experiments/score_human_study.py
           python -m py_compile experiments/study_server.py
@@ -104,4 +105,5 @@ jobs:
             experiments/participant_pool_assisted.json
             experiments/planned_cohort.json
             experiments/cohort_validation.json
+            experiments/EXPERIMENT_FREEZE.md
           retention-days: 14
