@@ -106,6 +106,7 @@ def validate(
     rows: list[dict[str, Any]],
     *,
     metadata_row: dict[str, Any] | None = None,
+    raw_traces_present: bool | None = None,
 ) -> tuple[str, list[str]]:
     condition = candidate["condition"]
     refs = set(candidate.get("evidence_refs", []))
@@ -164,7 +165,7 @@ def validate(
         # The raw case layout is authoritative for modality availability. Metadata
         # is optional corroboration and must never substitute for the files.
         traces_available = metadata_row.get("has_traces") if metadata_row else None
-        if traces_available is True:
+        if raw_traces_present is True or traces_available is True:
             return "REJECTED", ["metadata contradicts the required missing-traces condition"]
         return "VALIDATED", [
             "metrics and logs are observable in raw telemetry",
@@ -254,7 +255,7 @@ def main() -> None:
                 traces=paths["traces"],
             )
             rows = available_rows(evidence)
-            status, reasons = validate(candidate.to_dict(), rows, metadata_row=metadata_row)
+            status, reasons = validate(candidate.to_dict(), rows, metadata_row=metadata_row, raw_traces_present=paths["traces"].exists())
             report.append({
                 **base,
                 "status": status,
