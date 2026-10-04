@@ -38,7 +38,7 @@ function render(){
 async function submitTrial(){
   const t=manifest.trials[index],elapsed=(Date.now()-started)/1000;
   const payload={
-    trial_id:t.trial_id,participant_id:participant,public_case_id:t.public_case_id,mode:t.mode,
+    trial_id:t.trial_id,participant_id:participant,public_case_id:t.public_case_id,
     start_time:new Date(started).toISOString(),end_time:new Date().toISOString(),elapsed_seconds:elapsed,
     final_diagnosis:document.getElementById('answer').value,confidence:Number(document.getElementById('confidence').value),
     diagnostic_actions:[{action_id:'participant-next-action',action_type:'diagnostic_check',target:null,rationale:document.getElementById('action').value,timestamp_s:elapsed}],
