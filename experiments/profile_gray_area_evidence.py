@@ -42,6 +42,7 @@ def main():
             "direction_counts":direction_counts,
             "service_counts":{},
             "evidence_rows":len(rows),
+            "observations":[{k:r.get(k) for k in ("source","service","signal","observation","direction","strength","time_context")} for r in rows],
             "raw_traces_present":paths["traces"].exists(),
         })
         for r in rows:
