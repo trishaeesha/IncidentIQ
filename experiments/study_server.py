@@ -8,12 +8,22 @@ from __future__ import annotations
 import json
 import time
 import uuid
+import argparse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent
-MANIFEST=ROOT/"study_manifest_participant.json"
+DEFAULT_MANIFEST=ROOT/"study_manifest_participant.json"
 HTML=ROOT/"study.html"
+
+def parse_args():
+    p=argparse.ArgumentParser()
+    p.add_argument('--manifest',type=Path,default=DEFAULT_MANIFEST)
+    p.add_argument('--port',type=int,default=8000)
+    return p.parse_args()
+
+ARGS=parse_args()
+MANIFEST=ARGS.manifest.resolve()
 
 if not MANIFEST.exists():
     raise SystemExit("Missing study_manifest_participant.json. Build the researcher manifest and create a participant assignment first.")
@@ -66,10 +76,12 @@ class Handler(BaseHTTPRequestHandler):
         payload={k:v for k,v in payload.items() if k in allowed}
         payload["server_received_at"]=time.time()
         payload["record_id"]=uuid.uuid4().hex
-        Path("participant_results").mkdir(exist_ok=True)
-        out=Path("participant_results")/(payload["record_id"]+".json")
+        results_dir=MANIFEST.parent/"participant_results"
+        results_dir.mkdir(exist_ok=True)
+        out=results_dir/(payload["record_id"]+".json")
         out.write_text(json.dumps(payload,indent=2),encoding="utf-8")
         self.send_json(201,{"record_id":payload["record_id"]})
 
 if __name__=="__main__":
-    HTTPServer(("127.0.0.1",8000),Handler).serve_forever()
+    print(f"Participant study server: http://127.0.0.1:{ARGS.port}")
+    HTTPServer(("127.0.0.1",ARGS.port),Handler).serve_forever()
