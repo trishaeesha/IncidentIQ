@@ -35,6 +35,7 @@ def main():
     for r in records:
         e=truth.get(str(r.get("trial_id")))
         if not e: continue
+        mode=e.get("mode") or r.get("mode")
         ok=correct(r.get("final_diagnosis"),e.get("correct_diagnoses",[]))
         confidence=float(r.get("confidence",0) or 0)/100.0
         actions=r.get("diagnostic_actions",[]) or []
@@ -43,7 +44,7 @@ def main():
         rows.append({
             "trial_id":r.get("trial_id"),
             "participant_id":r.get("participant_id"),
-            "mode":r.get("mode"),
+            "mode":mode,
             "condition":e.get("condition"),
             "diagnosis_correct":ok,
             "confidence":confidence,
