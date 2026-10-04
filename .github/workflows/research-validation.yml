@@ -51,6 +51,41 @@ jobs:
           python experiments/profile_gray_area_evidence.py \
             --data-root data/rcaeval \
             --out experiments/gray_area_evidence_profile.json
+      - name: Generate baseline evidence outputs
+        run: |
+          mkdir -p outputs
+          for case in \
+            re2ob_checkoutservice_cpu_2 \
+            re2ob_checkoutservice_mem_2 \
+            re2ob_checkoutservice_loss_1 \
+            re2ob_checkoutservice_loss_2 \
+            re2ss_user_loss_1
+          do
+            python experiments/run_real_rcaeval_case.py \
+              --data-root data/rcaeval \
+              --case "$case" > "outputs/$case.json"
+          done
+      - name: Build researcher and participant study pools
+        run: |
+          python experiments/build_study_manifest.py \
+            --outputs outputs \
+            --telemetry-validation experiments/telemetry_validation.json \
+            --researcher-out experiments/researcher_trials.json \
+            --researcher-pool-out experiments/researcher_pool.json \
+            --participant-pool-out experiments/participant_pool.json
+      - name: Counterbalance planned cohort
+        run: |
+          python experiments/make_cohort_assignments.py \
+            --pool experiments/researcher_pool.json \
+            --participants 6 \
+            --out experiments/planned_cohort.json \
+            --seed 20261003
+      - name: Validate planned cohort
+        run: |
+          python experiments/validate_cohort_assignments.py \
+            --input experiments/planned_cohort.json \
+            --pool experiments/researcher_pool.json \
+            --out experiments/cohort_validation.json
       - name: Upload researcher-only validation report
         uses: actions/upload-artifact@v4
         with:
@@ -58,4 +93,9 @@ jobs:
           path: |
             experiments/telemetry_validation.json
             experiments/gray_area_evidence_profile.json
+            experiments/researcher_trials.json
+            experiments/researcher_pool.json
+            experiments/participant_pool.json
+            experiments/planned_cohort.json
+            experiments/cohort_validation.json
           retention-days: 14
