@@ -31,6 +31,7 @@ jobs:
           python -m py_compile experiments/score_human_study.py
           python -m py_compile experiments/study_server.py
           python -m py_compile experiments/deployment_smoke.py
+          python -m py_compile experiments/prototype_server.py
 
   telemetry-validation:
     runs-on: ubuntu-latest
