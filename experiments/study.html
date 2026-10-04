@@ -34,6 +34,9 @@ function render(){
   started=Date.now();
   let html='<h2>Incident '+(index+1)+' / '+manifest.trial_count+'</h2>';
   html+='<p><b>Assistance mode:</b> '+escapeHtml(t.mode)+'</p>';
+  if(t.assistance){
+    html+='<h3>AI assistance</h3><pre>'+escapeHtml(JSON.stringify(t.assistance,null,2))+'</pre>';
+  }
   html+='<p>'+escapeHtml(t.instructions)+'</p>';
   html+='<h3>Available telemetry</h3><pre>'+escapeHtml(JSON.stringify(t.evidence,null,2))+'</pre>';
   document.getElementById('case').innerHTML=html;
