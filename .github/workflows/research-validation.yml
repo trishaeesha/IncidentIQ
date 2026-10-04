@@ -26,3 +26,27 @@ jobs:
           python -m py_compile experiments/score_human_study.py
           python -m py_compile experiments/study_server.py
           python -m py_compile experiments/deployment_smoke.py
+
+  telemetry-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install telemetry dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Download exact RCAEval gray-area cases
+        run: |
+          python experiments/acquire_rcaeval_cases.py --data-root data/rcaeval
+      - name: Validate raw telemetry
+        run: |
+          python experiments/validate_gray_area_telemetry.py             --data-root data/rcaeval             --out experiments/telemetry_validation.json
+      - name: Upload researcher-only validation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: gray-area-telemetry-validation
+          path: experiments/telemetry_validation.json
+          retention-days: 14
