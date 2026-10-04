@@ -79,10 +79,14 @@ jobs:
             --researcher-out experiments/researcher_trials.json \
             --researcher-pool-out experiments/researcher_pool.json \
             --participant-pool-out experiments/participant_pool.json
+      - name: Materialize assistance arms
+        run: |
+          python experiments/build_study_assistance.py             --input experiments/researcher_pool.json             --output experiments/researcher_pool_assisted.json
+          python experiments/build_study_assistance.py             --input experiments/participant_pool.json             --output experiments/participant_pool_assisted.json
       - name: Counterbalance planned cohort
         run: |
           python experiments/make_cohort_assignments.py \
-            --pool experiments/researcher_pool.json \
+            --pool experiments/researcher_pool_assisted.json \
             --participants 6 \
             --out experiments/planned_cohort.json \
             --seed 20261003
