@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IncidentIQ — Evidence-Driven Incident Investigation</title>
+<style>
+:root{--bg:#071018;--panel:#0d1822;--panel2:#111f2b;--line:#223442;--text:#e8f0f5;--muted:#91a4b2;--accent:#61d6c5;--warn:#f2bd63;--danger:#ef7d87;--ok:#77d68d}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#061019,#0b151e 55%,#071018);color:var(--text);font:14px/1.5 Inter,system-ui,Segoe UI,sans-serif}
+header{height:72px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:#08131cdd;backdrop-filter:blur(10px);position:sticky;top:0;z-index:5}
+.brand{display:flex;gap:12px;align-items:center}.mark{width:34px;height:34px;border:1px solid #3b6670;border-radius:10px;display:grid;place-items:center;color:var(--accent);font-weight:800}.brand b{font-size:17px}.brand span{display:block;color:var(--muted);font-size:11px}
+.badge{border:1px solid #2c4b57;color:var(--accent);padding:6px 10px;border-radius:999px;font-size:11px}
+.layout{display:grid;grid-template-columns:250px 1fr;min-height:calc(100vh - 72px)}aside{border-right:1px solid var(--line);padding:22px 16px}.side-title{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.12em;margin:0 10px 12px}
+.case{width:100%;text-align:left;background:transparent;color:var(--text);border:1px solid transparent;border-radius:10px;padding:12px 10px;margin:3px 0;cursor:pointer}.case:hover,.case.active{background:var(--panel2);border-color:var(--line)}.case small{display:block;color:var(--muted);margin-top:3px}
+main{padding:28px;max-width:1500px;width:100%;margin:auto}.top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:22px}.eyebrow{color:var(--accent);font-size:11px;text-transform:uppercase;letter-spacing:.14em}.title{font-size:30px;font-weight:700;margin:5px 0}.subtitle{color:var(--muted);max-width:780px}
+.actions button{background:#15313a;color:var(--text);border:1px solid #2b5862;border-radius:9px;padding:10px 14px;cursor:pointer}.actions button:hover{border-color:var(--accent)}
+.grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(330px,.75fr);gap:18px}.card{background:linear-gradient(180deg,#0e1b26,#0b1720);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 10px 30px #0002}.card h2{font-size:14px;margin:0 0 14px}.muted{color:var(--muted)}
+.evidence{display:grid;gap:9px;max-height:520px;overflow:auto}.ev{display:grid;grid-template-columns:75px 1fr auto;gap:12px;padding:11px;border:1px solid #1d303c;border-radius:9px;background:#0b161f}.source{font-size:10px;text-transform:uppercase;color:var(--accent);padding-top:2px}.ev b{font-size:13px}.ev p{margin:3px 0 0;color:var(--muted);font-size:12px}.delta{font-variant-numeric:tabular-nums;color:var(--text);font-size:12px}.up{color:var(--warn)}.down{color:#9db7d4}
+.hyp{border:1px solid #20333f;border-radius:10px;padding:13px;margin-bottom:10px}.hyp.toprank{border-color:#37645f}.hyp-head{display:flex;justify-content:space-between;gap:10px}.hyp-name{font-weight:700}.score{color:var(--accent);font-weight:700}.bar{height:5px;background:#1b2a34;border-radius:99px;margin:9px 0}.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{font-size:10px;border:1px solid #2a414d;border-radius:999px;padding:3px 7px;color:var(--muted)}.chip.warn{color:var(--warn);border-color:#624b2c}
+.decision{border:1px solid #31534e;background:#0b1d1e;border-radius:10px;padding:14px}.decision .label{font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.12em}.decision strong{display:block;font-size:15px;margin:5px 0 10px}.next{margin-top:12px;padding:11px;background:#111f29;border-radius:8px;color:#d9e5ea}
+.integrity{margin-top:18px;border:1px dashed #2c4650;border-radius:12px;padding:13px;color:var(--muted);font-size:11px}.integrity b{color:var(--text)}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+@media(max-width:950px){.layout{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line);display:flex;gap:6px;overflow:auto}.side-title{display:none}.case{min-width:120px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="brand"><div class="mark">IQ</div><div><b>IncidentIQ</b><span>Evidence-Driven Incident Investigation</span></div></div><div class="badge">RESEARCH PROTOTYPE · HUMAN IN CONTROL</div></header>
+<div class="layout">
+<aside><p class="side-title">Validated demo cases</p><div id="cases"></div></aside>
+<main>
+<div class="top"><div><div class="eyebrow">Incident investigation console</div><div class="title" id="title">Loading…</div><div class="subtitle" id="subtitle">Grounded in observed telemetry. The system ranks hypotheses; it does not declare causal truth.</div></div><div class="actions"><button onclick="investigate()">↻ Re-run investigation</button></div></div>
+<div class="grid">
+<section class="card"><h2>Telemetry evidence <span class="muted" id="count"></span></h2><div id="evidence" class="evidence"></div></section>
+<section class="card"><h2>Diagnostic reasoning</h2><div id="hypotheses"></div><div id="decision"></div></section>
+</div>
+<div class="integrity"><b>Research integrity:</b> evaluator ground truth is not loaded into this diagnostic path. Evidence shown here is a sample of validated RCAEval-derived telemetry used for the prototype. AI output is decision support, not an operational command.</div>
+</main></div>
+<script>
+let selected="CASE-01";
+const esc=s=>String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+async function loadCases(){const r=await fetch("/api/cases");const d=await r.json();document.getElementById("cases").innerHTML=d.cases.map((c,i)=>'<button class="case '+(i===0?"active":"")+'" onclick="selectCase(\''+c.public_case_id+'\',this)"><b>'+c.public_case_id+'</b><small>'+c.evidence_count+' evidence observations</small></button>').join("");investigate();}
+function selectCase(id,el){selected=id;document.querySelectorAll(".case").forEach(x=>x.classList.remove("active"));el.classList.add("active");investigate();}
+async function investigate(){
+document.getElementById("title").textContent=selected+" · investigation";
+document.getElementById("hypotheses").innerHTML='<div class="empty">Running evidence interpretation…</div>';
+const r=await fetch("/api/investigate/"+selected);const d=await r.json();
+document.getElementById("count").textContent="· "+d.evidence.length+" observations";
+document.getElementById("evidence").innerHTML=d.evidence.map(e=>'<div class="ev"><div class="source">'+esc(e.source)+'</div><div><b>'+esc(e.service||"Unattributed")+'</b><p>'+esc(e.observation)+'</p><p class="muted">'+esc(e.signal)+'</p></div><div class="delta '+(e.direction==="increase"?"up":"down")+'">'+esc(e.direction)+'<br>'+Number(e.magnitude||0).toFixed(3)+'</div></div>').join("");
+document.getElementById("hypotheses").innerHTML=d.hypotheses.length?d.hypotheses.slice(0,5).map((h,i)=>'<div class="hyp '+(i===0?"toprank":"")+'"><div class="hyp-head"><span class="hyp-name">'+esc(h.hypothesis)+'</span><span class="score">'+Math.round(h.confidence*100)+'%</span></div><div class="bar"><i style="width:'+Math.max(3,h.confidence*100)+'%"></i></div><div class="chips"><span class="chip">'+h.supporting_evidence.length+' supporting</span><span class="chip">'+h.contradicting_evidence.length+' contradicting</span><span class="chip warn">'+h.missing_evidence.length+' missing</span><span class="chip">'+esc(h.uncertainty)+' uncertainty</span></div><p class="muted">'+esc(h.rationale)+'</p></div>').join(""):'<div class="empty">No supported hypothesis. The engine abstains.</div>';
+const x=d.decision;document.getElementById("decision").innerHTML='<div class="decision"><div class="label">Decision support</div><strong>'+esc(x.decision)+'</strong><div class="muted">Human control required: '+(x.human_control_required?"Yes":"No")+'</div>'+(x.competing_hypotheses?.length?'<div class="chips" style="margin-top:9px">'+x.competing_hypotheses.map(v=>'<span class="chip">'+esc(v)+'</span>').join("")+'</div>':'')+(x.recommended_action?'<div class="next"><b>Next diagnostic action</b><br>'+esc(x.recommended_action)+'</div>':'')+'</div>';
+}
+loadCases();
+</script>
+</body></html>
