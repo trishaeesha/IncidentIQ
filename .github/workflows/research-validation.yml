@@ -16,6 +16,7 @@ jobs:
           python-version: '3.11'
       - name: Compile research scripts
         run: |
+          python -m py_compile experiments/acquire_rcaeval_cases.py
           python -m py_compile experiments/build_study_manifest.py
           python -m py_compile experiments/make_participant_assignment.py
           python -m py_compile experiments/make_cohort_assignments.py
