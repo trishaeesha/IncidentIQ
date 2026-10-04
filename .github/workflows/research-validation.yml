@@ -40,14 +40,14 @@ jobs:
           if ! kill -0 $SERVER_PID 2>/dev/null; then cat /tmp/incidentiq-prototype.log; exit 1; fi
           python - <<'PY
           import json, urllib.request
-          health=json.load(urllib.request.urlopen('http://127.0.0.1:8010/api/health'))
+          health=json.load(urllib.request.urlopen("http://127.0.0.1:8010/api/health"))
           assert health['status']=='ok'
-          cases=json.load(urllib.request.urlopen('http://127.0.0.1:8010/api/cases'))
+          cases=json.load(urllib.request.urlopen("http://127.0.0.1:8010/api/cases"))
           assert len(cases['cases'])==5
-          result=json.load(urllib.request.urlopen('http://127.0.0.1:8010/api/investigate/CASE-02'))
+          result=json.load(urllib.request.urlopen("http://127.0.0.1:8010/api/investigate/CASE-02"))
           assert result['research_integrity']['ground_truth_in_pipeline'] is False
           assert result['decision']['human_control_required'] is True
-          print('prototype smoke test passed')
+          print("prototype smoke test passed")
           PY
 
   telemetry-validation:
