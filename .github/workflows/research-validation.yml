@@ -22,6 +22,7 @@ jobs:
           python -m py_compile experiments/make_cohort_assignments.py
           python -m py_compile experiments/audit_gray_area_candidates.py
           python -m py_compile experiments/validate_gray_area_telemetry.py
+          python -m py_compile experiments/profile_gray_area_evidence.py
           python -m py_compile experiments/validate_cohort_assignments.py
           python -m py_compile experiments/score_human_study.py
           python -m py_compile experiments/study_server.py
@@ -44,9 +45,16 @@ jobs:
       - name: Validate raw telemetry
         run: |
           python experiments/validate_gray_area_telemetry.py             --data-root data/rcaeval             --out experiments/telemetry_validation.json
+      - name: Profile extracted evidence
+        run: |
+          python experiments/profile_gray_area_evidence.py \
+            --data-root data/rcaeval \
+            --out experiments/gray_area_evidence_profile.json
       - name: Upload researcher-only validation report
         uses: actions/upload-artifact@v4
         with:
           name: gray-area-telemetry-validation
-          path: experiments/telemetry_validation.json
+          path: |
+            experiments/telemetry_validation.json
+            experiments/gray_area_evidence_profile.json
           retention-days: 14
