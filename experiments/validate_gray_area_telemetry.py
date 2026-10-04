@@ -185,9 +185,20 @@ def validate(
 def _load_metadata(path: str | None) -> dict[str, dict[str, Any]]:
     if not path:
         return {}
-    payload = json.loads(Path(path).read_text(encoding="utf-8-sig"))
-    rows = payload if isinstance(payload, list) else payload.get("rows", [])
-    return {item.get("case") or item.get("row", {}).get("case"): (item if "row" not in item else item["row"]) for item in rows}
+    p = Path(path)
+    if p.suffix == ".parquet":
+        import pandas as pd
+        rows = pd.read_parquet(p).to_dict(orient="records")
+    else:
+        payload = json.loads(p.read_text(encoding="utf-8-sig"))
+        rows = payload if isinstance(payload, list) else payload.get("rows", [])
+    return {
+        item.get("case") or item.get("row", {}).get("case"): (
+            item if "row" not in item else item["row"]
+        )
+        for item in rows
+        if item.get("case") or item.get("row", {}).get("case")
+    }
 
 
 def _metadata_observation(row: dict[str, Any], case_id: str) -> dict[str, Any]:
