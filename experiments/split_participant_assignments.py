@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse,json
 from pathlib import Path
 
-FORBIDDEN={"condition","condition_key","condition_rationale","source_case_id","root_cause_service","fault","fault_description","ground_truth"}
+FORBIDDEN={"mode","condition","condition_key","condition_rationale","source_case_id","root_cause_service","fault","fault_description","ground_truth"}
 
 def main():
     p=argparse.ArgumentParser()
