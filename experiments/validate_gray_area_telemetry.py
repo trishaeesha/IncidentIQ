@@ -188,7 +188,7 @@ def validate(
     if condition == "misleading":
         if not metadata_row:
             return "REJECTED", ["RCAEval case-index metadata required to identify evaluator root service"]
-        root = str(metadata_row.get("root_cause_service") or "").lower()
+        root = str((metadata_row or {}).get("root_cause_service") or _encoded_root_service(candidate["case_id"]) or "").lower()
         scoped = [r for r in rows if any(_ref_matches(ref, r) for ref in refs if not ref.startswith("manifest:"))]
         if not root:
             return "REJECTED", ["missing evaluator root service"]
@@ -230,6 +230,20 @@ def _load_metadata(path: str | None) -> dict[str, dict[str, Any]]:
         for item in rows
         if item.get("case") or item.get("row", {}).get("case")
     }
+
+
+def _encoded_root_service(case_id: str) -> str | None:
+    """Recover evaluator root service from the RCAEval case name.
+
+    This helper is researcher/evaluator-only. The encoded root-cause label is
+    never passed to evidence extraction or participant-facing artifacts.
+    """
+    import re
+    m = re.match(
+        r"^re\\d+[a-z]+_(.+)_(?:cpu|mem|disk|delay|loss|socket)_\\d+$",
+        str(case_id),
+    )
+    return m.group(1) if m else None
 
 
 def _metadata_observation(row: dict[str, Any], case_id: str) -> dict[str, Any]:
