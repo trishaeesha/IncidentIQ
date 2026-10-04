@@ -45,7 +45,10 @@ jobs:
           python experiments/acquire_rcaeval_cases.py --data-root data/rcaeval
       - name: Validate raw telemetry
         run: |
-          python experiments/validate_gray_area_telemetry.py             --data-root data/rcaeval             --out experiments/telemetry_validation.json
+          python experiments/validate_gray_area_telemetry.py \
+            --data-root data/rcaeval \
+            --metadata data/rcaeval/cases.parquet \
+            --out experiments/telemetry_validation.json
       - name: Profile extracted evidence
         run: |
           python experiments/profile_gray_area_evidence.py \
