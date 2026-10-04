@@ -26,6 +26,7 @@ jobs:
           python -m py_compile experiments/profile_gray_area_evidence.py
           python -m py_compile experiments/build_study_assistance.py
           python -m py_compile experiments/analyze_human_study.py
+          python -m py_compile experiments/split_participant_assignments.py
           python -m py_compile experiments/validate_cohort_assignments.py
           python -m py_compile experiments/score_human_study.py
           python -m py_compile experiments/study_server.py
@@ -85,6 +86,9 @@ jobs:
             --participants 6 \
             --out experiments/planned_cohort.json \
             --seed 20261003
+      - name: Split participant launch assignments
+        run: |
+          python experiments/split_participant_assignments.py             --input experiments/planned_cohort.json             --out-dir experiments/participant_assignments
       - name: Validate planned cohort
         run: |
           python experiments/validate_cohort_assignments.py \
@@ -105,5 +109,6 @@ jobs:
             experiments/participant_pool_assisted.json
             experiments/planned_cohort.json
             experiments/cohort_validation.json
+            experiments/participant_assignments/
             experiments/EXPERIMENT_FREEZE.md
           retention-days: 14
