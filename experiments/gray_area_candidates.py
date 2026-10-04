@@ -21,7 +21,7 @@ CANDIDATES = [
         condition_rationale="Resource pressure and error-like log behavior provide competing explanatory signals.",
         candidate_hypotheses=("resource saturation","error or failure increase"),
         evidence_characteristics=("resource change","error-like log frequency change"),
-        evidence_refs=("metrics:checkoutservice:memory","logs:error_like"),
+        evidence_refs=("metrics:checkoutservice:mem","logs:error_like"),
     ),
     ConditionEvidence(
         case_id="re2ss_user_loss_1",
