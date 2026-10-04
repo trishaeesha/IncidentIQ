@@ -9,6 +9,9 @@ MODES={"human_only","generic_ai","incidentiq"}
 def fingerprint(evidence):
     return json.dumps(evidence, sort_keys=True, separators=(",", ":"))
 
+def assistance_fingerprint(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("--input",required=True)
@@ -54,6 +57,12 @@ def main():
                 continue
             cell=matches[0]
             observed[cell][mode].add(pid)
+            expected_assistance = next(
+                x.get("assistance") for x in pool.get("trials",[])
+                if x.get("mode")==mode and x.get("public_case_id")==cell[0] and fingerprint(x.get("evidence",[]))==fingerprint(trial.get("evidence",[]))
+            )
+            if assistance_fingerprint(trial.get("assistance")) != assistance_fingerprint(expected_assistance):
+                errors.append(f"{pid}/{tid}: assistance does not match researcher pool")
 
     for cell,by_mode in observed.items():
         if set(by_mode)!=MODES:
