@@ -70,7 +70,7 @@ class Handler(BaseHTTPRequestHandler):
         payload=json.loads(self.rfile.read(length))
         if payload.get("participant_id") != TRIALS["participant_id"]:
             return self.send_json(400,{"error":"participant mismatch"})
-        allowed={"trial_id","participant_id","public_case_id","mode","start_time","end_time",
+        allowed={"trial_id","participant_id","public_case_id","start_time","end_time",
                  "elapsed_seconds","final_diagnosis","confidence","diagnostic_actions",
                  "decision_events","workload_score","actions_followed","actions_overridden"}
         payload={k:v for k,v in payload.items() if k in allowed}
