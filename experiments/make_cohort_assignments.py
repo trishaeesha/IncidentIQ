@@ -23,16 +23,19 @@ def main():
         cells.setdefault((trial["public_case_id"],trial["condition_key"]),[]).append(trial)
     rng=random.Random(a.seed)
     assignments=[]
+    keys=list(cells)
     for pid_index in range(a.participants):
         participant_id=f"P{pid_index+1:02d}"
-        keys=list(cells); rng.shuffle(keys)
+        order=list(range(len(keys)))
+        rng.shuffle(order)
         rows=[]
-        for cell_index,key in enumerate(keys):
+        for display_index,stable_cell_index in enumerate(order):
+            key=keys[stable_cell_index]
             candidates=cells[key]
-            mode=MODES[(cell_index+pid_index)%3]
+            mode=MODES[(stable_cell_index+pid_index)%3]
             chosen=next(x for x in candidates if x["mode"]==mode)
             rows.append({
-                "trial_id":f"{participant_id}-T{cell_index+1:03d}",
+                "trial_id":f"{participant_id}-T{display_index+1:03d}",
                 "participant_id":participant_id,
                 "public_case_id":chosen["public_case_id"],
                 "mode":chosen["mode"],
