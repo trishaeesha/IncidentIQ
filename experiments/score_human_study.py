@@ -52,6 +52,7 @@ def main():
             "unnecessary_actions":unnecessary,
             "incorrect_actions":incorrect,
             "ai_followed":int(bool(r.get("actions_followed"))),
+            "workload_score":float(r.get("workload_score",0) or 0),
             "ai_overridden":int(bool(r.get("actions_overridden"))),
         })
 
@@ -71,6 +72,7 @@ def main():
             "mean_confidence_error":mean([x["confidence_error"] for x in items]),
             "mean_unnecessary_actions":mean([x["unnecessary_actions"] for x in items]),
             "mean_incorrect_actions":mean([x["incorrect_actions"] for x in items]),
+            "workload_score":mean([x.get("workload_score",0) for x in items]),
             "ai_follow_rate":mean([x["ai_followed"] for x in items]),
             "ai_override_rate":mean([x["ai_overridden"] for x in items]),
         })
