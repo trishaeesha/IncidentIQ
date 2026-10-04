@@ -17,6 +17,7 @@ CASES = (
     "re2ob_checkoutservice_cpu_2",
     "re2ob_checkoutservice_mem_2",
     "re2ss_user_loss_1",
+    "re2ob_checkoutservice_loss_1",
 )
 
 def main():
