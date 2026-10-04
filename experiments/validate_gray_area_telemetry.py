@@ -186,8 +186,6 @@ def validate(
         ]
 
     if condition == "misleading":
-        if not metadata_row:
-            return "REJECTED", ["RCAEval case-index metadata required to identify evaluator root service"]
         root = str((metadata_row or {}).get("root_cause_service") or _encoded_root_service(candidate["case_id"]) or "").lower()
         scoped = [r for r in rows if any(_ref_matches(ref, r) for ref in refs if not ref.startswith("manifest:"))]
         if not root:
