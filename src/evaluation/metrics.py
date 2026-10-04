@@ -135,14 +135,13 @@ def evaluate_trial(
         condition=truth.condition,
     )
 
-
 def confidence_error(
     confidence: Optional[float], correct: Optional[bool]
 ) -> Optional[float]:
     if confidence is None or correct is None:
         return None
-    # Round to avoid binary floating-point artifacts in deterministic reports.\n    return round(abs(confidence / 100.0 - float(correct)), 10)
-
+    # Round to avoid binary floating-point artifacts in deterministic reports.
+    return round(abs(confidence / 100.0 - float(correct)), 10)
 
 def summarize(values: Iterable[Optional[float]]) -> dict[str, Optional[float]]:
     xs = [x for x in values if x is not None]
