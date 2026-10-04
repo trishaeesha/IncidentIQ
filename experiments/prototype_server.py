@@ -17,6 +17,16 @@ sys.path.insert(0, str(ROOT))
 from src.models import HypothesisEngine, DecisionEngine
 
 CASES = json.loads(DATA.read_text(encoding="utf-8"))["cases"]
+# Prefer the complete validated study evidence when the generated pool exists.
+# The committed demo file remains the offline fallback.
+POOL = ROOT / "experiments" / "participant_pool_assisted.json"
+if POOL.exists():
+    pool = json.loads(POOL.read_text(encoding="utf-8"))
+    complete = {}
+    for trial in pool.get("trials", []):
+        complete.setdefault(trial["public_case_id"], {"public_case_id": trial["public_case_id"], "evidence": trial.get("evidence", [])})
+    if len(complete) == len(CASES):
+        CASES = list(complete.values())
 CASE_MAP = {c["public_case_id"]: c for c in CASES}
 
 def investigate(case):
