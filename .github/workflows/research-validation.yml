@@ -97,7 +97,7 @@ jobs:
         run: |
           python experiments/validate_cohort_assignments.py \
             --input experiments/planned_cohort.json \
-            --pool experiments/researcher_pool.json \
+            --pool experiments/researcher_pool_assisted.json \
             --out experiments/cohort_validation.json
       - name: Upload researcher-only validation report
         uses: actions/upload-artifact@v4
