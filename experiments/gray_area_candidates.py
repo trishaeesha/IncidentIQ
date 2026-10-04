@@ -24,6 +24,22 @@ CANDIDATES = [
         evidence_refs=("metrics:checkoutservice:mem","logs:error_like"),
     ),
     ConditionEvidence(
+        case_id="re2ob_checkoutservice_loss_1",
+        condition="conflicting",
+        condition_rationale="The root service shows strong latency degradation while its log-rate signal moves in the opposite direction, creating cross-source disagreement about incident severity.",
+        candidate_hypotheses=("checkoutservice degradation", "telemetry/logging suppression"),
+        conflicting_sources=("metrics:checkoutservice:latency-90", "logs:checkoutservice:log_rate"),
+        evidence_refs=("metrics:checkoutservice:latency-90", "logs:checkoutservice:log_rate"),
+    ),
+    ConditionEvidence(
+        case_id="re2ob_checkoutservice_loss_2",
+        condition="misleading",
+        condition_rationale="A strong downstream payment-service latency signal can plausibly attract diagnosis away from the evaluator root service.",
+        candidate_hypotheses=("paymentservice degradation",),
+        misleading_signals=("metrics:paymentservice:latency-90",),
+        evidence_refs=("metrics:paymentservice:latency-90",),
+    ),
+    ConditionEvidence(
         case_id="re2ss_user_loss_1",
         condition="incomplete",
         condition_rationale="The Sock Shop case lacks trace telemetry, limiting cross-service request-path evidence.",
