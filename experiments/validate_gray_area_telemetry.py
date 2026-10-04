@@ -105,7 +105,7 @@ def validate(
     candidate: dict[str, Any],
     rows: list[dict[str, Any]],
     *,
-    available_sources: set[str] | None = None,
+    metadata_row: dict[str, Any] | None = None,
 ) -> tuple[str, list[str]]:
     condition = candidate["condition"]
     refs = set(candidate.get("evidence_refs", []))
@@ -155,12 +155,20 @@ def validate(
         return "VALIDATED", ["opposing directions observed across at least two sources"]
 
     if condition == "incomplete":
-        sources = sorted({str(r.get("source")) for r in rows if r.get("source")})
-        if len(sources) < 2:
-            return "REJECTED", ["cannot hide one modality while retaining another"]
+        # Incomplete must represent a real missing modality, not an arbitrary
+        # deletion of an available evidence source. The candidate currently
+        # targets RE2-SS, where RCAEval metadata explicitly records no traces.
+        if not metadata_row:
+            return "REJECTED", ["RCAEval metadata row required to establish missing modality"]
+        if metadata_row.get("has_traces") is not False:
+            return "REJECTED", ["candidate requires has_traces=false in RCAEval metadata"]
+        sources = {str(r.get("source")) for r in rows if r.get("source")}
+        if "metrics" not in sources or "logs" not in sources:
+            return "REJECTED", ["expected both metrics and logs to be observable while traces are absent"]
         return "VALIDATED", [
-            "at least two sources are actually available",
-            f"candidate can hide one source ({sources[-1]})",
+            "metrics and logs are observable in raw telemetry",
+            "RCAEval metadata confirms traces are unavailable",
+            "incomplete condition will preserve available evidence rather than hide an arbitrary source",
         ]
 
     if condition == "misleading":
@@ -244,7 +252,7 @@ def main() -> None:
                 traces=paths["traces"],
             )
             rows = available_rows(evidence)
-            status, reasons = validate(candidate.to_dict(), rows)
+            status, reasons = validate(candidate.to_dict(), rows, metadata_row=metadata_row)
             report.append({
                 **base,
                 "status": status,
