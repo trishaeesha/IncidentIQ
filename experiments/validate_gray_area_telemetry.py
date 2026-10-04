@@ -184,7 +184,8 @@ def _load_metadata(path: str | None) -> dict[str, dict[str, Any]]:
     if not path:
         return {}
     payload = json.loads(Path(path).read_text(encoding="utf-8-sig"))
-    return {item["row"]["case"]: item["row"] for item in payload.get("rows", [])}
+    rows = payload if isinstance(payload, list) else payload.get("rows", [])
+    return {item.get("case") or item.get("row", {}).get("case"): (item if "row" not in item else item["row"]) for item in rows}
 
 
 def _metadata_observation(row: dict[str, Any], case_id: str) -> dict[str, Any]:
