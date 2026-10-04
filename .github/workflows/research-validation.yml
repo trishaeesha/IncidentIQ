@@ -18,6 +18,7 @@ jobs:
       - name: Compile research scripts
         run: |
           python -m py_compile experiments/acquire_rcaeval_cases.py
+          python -m py_compile experiments/build_evaluator_truth.py
           python -m py_compile experiments/build_study_manifest.py
           python -m py_compile experiments/make_participant_assignment.py
           python -m py_compile experiments/make_cohort_assignments.py
@@ -35,11 +36,10 @@ jobs:
           python -m py_compile experiments/build_research_report.py
           python experiments/prototype_server.py > /tmp/incidentiq-prototype.log 2>&1 &
           SERVER_PID=$!
-          # Clean up the prototype process after the smoke test.
           trap "kill $SERVER_PID" EXIT
           sleep 2
           if ! kill -0 $SERVER_PID 2>/dev/null; then cat /tmp/incidentiq-prototype.log; exit 1; fi
-          python -c "import json, urllib.request; health=json.load(urllib.request.urlopen(\"http://127.0.0.1:8010/api/health\")); assert health[\"status\"]==\"ok\"; cases=json.load(urllib.request.urlopen(\"http://127.0.0.1:8010/api/cases\")); assert len(cases[\"cases\"])==5; result=json.load(urllib.request.urlopen(\"http://127.0.0.1:8010/api/investigate/CASE-02\")); assert result[\"research_integrity\"][\"ground_truth_in_pipeline\"] is False; assert result[\"decision\"][\"human_control_required\"] is True; print(\"prototype smoke test passed\")"
+          python -c "import json, urllib.request; health=json.load(urllib.request.urlopen('http://127.0.0.1:8010/api/health')); assert health['status']=='ok'; cases=json.load(urllib.request.urlopen('http://127.0.0.1:8010/api/cases')); assert len(cases['cases'])==5; result=json.load(urllib.request.urlopen('http://127.0.0.1:8010/api/investigate/CASE-02')); assert result['research_integrity']['ground_truth_in_pipeline'] is False; assert result['decision']['human_control_required'] is True; print('prototype smoke test passed')"
 
   telemetry-validation:
     runs-on: ubuntu-latest
@@ -57,57 +57,33 @@ jobs:
           python experiments/acquire_rcaeval_cases.py --data-root data/rcaeval
       - name: Validate raw telemetry
         run: |
-          python experiments/validate_gray_area_telemetry.py \
-            --data-root data/rcaeval \
-            --metadata data/rcaeval/cases.parquet \
-            --out experiments/telemetry_validation.json
+          python experiments/validate_gray_area_telemetry.py             --data-root data/rcaeval             --metadata data/rcaeval/cases.parquet             --out experiments/telemetry_validation.json
       - name: Profile extracted evidence
         run: |
-          python experiments/profile_gray_area_evidence.py \
-            --data-root data/rcaeval \
-            --out experiments/gray_area_evidence_profile.json
+          python experiments/profile_gray_area_evidence.py             --data-root data/rcaeval             --out experiments/gray_area_evidence_profile.json
       - name: Generate baseline evidence outputs
         run: |
           mkdir -p outputs
-          for case in \
-            re2ob_checkoutservice_cpu_2 \
-            re2ob_checkoutservice_mem_2 \
-            re2ob_checkoutservice_loss_1 \
-            re2ob_checkoutservice_loss_2 \
-            re2ss_user_loss_1
+          for case in             re2ob_checkoutservice_cpu_2             re2ob_checkoutservice_mem_2             re2ob_checkoutservice_loss_1             re2ob_checkoutservice_loss_2             re2ss_user_loss_1
           do
-            python experiments/run_real_rcaeval_case.py \
-              --data-root data/rcaeval \
-              --case "$case" > "outputs/$case.json"
+            python experiments/run_real_rcaeval_case.py               --data-root data/rcaeval               --case "$case" > "outputs/$case.json"
           done
       - name: Build researcher and participant study pools
         run: |
-          python experiments/build_study_manifest.py \
-            --outputs outputs \
-            --telemetry-validation experiments/telemetry_validation.json \
-            --researcher-out experiments/researcher_trials.json \
-            --researcher-pool-out experiments/researcher_pool.json \
-            --participant-pool-out experiments/participant_pool.json
+          python experiments/build_study_manifest.py             --outputs outputs             --telemetry-validation experiments/telemetry_validation.json             --researcher-out experiments/researcher_trials.json             --researcher-pool-out experiments/researcher_pool.json             --participant-pool-out experiments/participant_pool.json
       - name: Materialize assistance arms
         run: |
-          python experiments/build_study_assistance.py             --input experiments/researcher_pool.json             --output experiments/researcher_pool_assisted.json
-          python experiments/build_study_assistance.py             --input experiments/participant_pool.json             --output experiments/participant_pool_assisted.json
+          python experiments/build_study_assistance.py --input experiments/researcher_pool.json --output experiments/researcher_pool_assisted.json
+          python experiments/build_study_assistance.py --input experiments/participant_pool.json --output experiments/participant_pool_assisted.json
       - name: Counterbalance planned cohort
         run: |
-          python experiments/make_cohort_assignments.py \
-            --pool experiments/researcher_pool_assisted.json \
-            --participants 6 \
-            --out experiments/planned_cohort.json \
-            --seed 20261003
+          python experiments/make_cohort_assignments.py             --pool experiments/researcher_pool_assisted.json             --participants 6             --out experiments/planned_cohort.json             --seed 20261003
       - name: Split participant launch assignments
         run: |
           python experiments/split_participant_assignments.py             --input experiments/planned_cohort.json             --out-dir experiments/participant_assignments
       - name: Validate planned cohort
         run: |
-          python experiments/validate_cohort_assignments.py \
-            --input experiments/planned_cohort.json \
-            --pool experiments/researcher_pool_assisted.json \
-            --out experiments/cohort_validation.json
+          python experiments/validate_cohort_assignments.py             --input experiments/planned_cohort.json             --pool experiments/researcher_pool_assisted.json             --out experiments/cohort_validation.json
       - name: Upload researcher-only validation report
         uses: actions/upload-artifact@v4
         with:
@@ -124,5 +100,4 @@ jobs:
             experiments/cohort_validation.json
             experiments/participant_assignments/
             experiments/EXPERIMENT_FREEZE.md
-          retention-days: 14          python -c "import json, urllib.request; health=json.load(urllib.request.urlopen(\"http://127.0.0.1:8010/api/health\")); assert health[\"status\"]==\"ok\"; cases=json.load(urllib.request.urlopen(\"http://127.0.0.1:8010/api/cases\")); assert len(cases[\"cases\"])==5; result=json.load(urllib.request.urlopen(\"http://127.0.0.1:8010/api/investigate/CASE-02\")); assert result[\"research_integrity\"][\"ground_truth_in_pipeline\"] is False; assert result[\"decision\"][\"human_control_required\"] is True; print(\"prototype smoke test passed\")"
-
+          retention-days: 14
