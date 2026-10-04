@@ -31,7 +31,7 @@ def main() -> None:
         snapshot_download(
             repo_id=args.repo_id,
             repo_type="dataset",
-            allow_patterns=[f"{case_id}/*"],
+            allow_patterns=[f"{case_id}/*", "cases.parquet"],
             local_dir=str(root),
         )
 
@@ -53,6 +53,16 @@ def main() -> None:
             f"{case_id}: verified metrics.parquet + inject_time.txt; "
             f"logs={'yes' if (case_root / 'logs.parquet').exists() else 'no'}; "
             f"traces={'yes' if (case_root / 'traces.parquet').exists() else 'no'}"
+        )
+
+    # Keep only metadata for the selected cases; this is researcher-side only.
+    import pandas as pd
+    index_path = root / "cases.parquet"
+    if index_path.exists():
+        selected = pd.read_parquet(index_path)
+        selected = selected[selected["case"].isin(CASES)]
+        (root / "cases_metadata.json").write_text(
+            selected.to_json(orient="records", indent=2), encoding="utf-8"
         )
 
 
