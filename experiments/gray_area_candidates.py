@@ -35,9 +35,9 @@ CANDIDATES = [
         case_id="re2ob_checkoutservice_loss_2",
         condition="misleading",
         condition_rationale="A strong downstream payment-service latency signal can plausibly attract diagnosis away from the evaluator root service.",
-        candidate_hypotheses=("paymentservice degradation",),
-        misleading_signals=("metrics:paymentservice:latency-90",),
-        evidence_refs=("metrics:paymentservice:latency-90",),
+        candidate_hypotheses=("emailservice degradation",),
+        misleading_signals=("metrics:emailservice:latency-90",),
+        evidence_refs=("metrics:emailservice:latency-90",),
     ),
     ConditionEvidence(
         case_id="re2ss_user_loss_1",
