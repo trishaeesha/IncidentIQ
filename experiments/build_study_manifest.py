@@ -65,6 +65,7 @@ def main():
     p.add_argument("--telemetry-validation",required=True,
                    help="Researcher-only report produced by validate_gray_area_telemetry.py")
     p.add_argument("--researcher-out",required=True)
+    p.add_argument("--researcher-pool-out",required=True)
     p.add_argument("--participant-pool-out",required=True)
     a=p.parse_args()
 
@@ -96,9 +97,41 @@ def main():
                         "mode":mode,"evidence":evidence,
                         "instructions":"Review the telemetry. State your diagnosis, confidence, and diagnostic action."})
 
-    Path(a.researcher_out).write_text(json.dumps({"trial_count":len(researcher),"trials":researcher},indent=2),encoding="utf-8")
-    Path(a.participant_pool_out).write_text(json.dumps({"schema_version":1,
-        "participant_safe":True,"participant_pool":True,"trial_count":len(pool),"trials":pool},indent=2),encoding="utf-8")
+    researcher_pool = []
+    for case_index, data in enumerate(records, 1):
+        public_case = f"CASE-{case_index:02d}"
+        raw_case = data["case_id"]
+        for condition in CONDITIONS:
+            if (raw_case, condition) not in validated_conditions:
+                continue
+            evidence = data["evidence_digest"]
+            for mode in MODES:
+                researcher_pool.append({
+                    "trial_id": f"RESEARCH-{len(researcher_pool)+1:04d}",
+                    "public_case_id": public_case,
+                    "source_case_id": raw_case,
+                    "condition_key": condition,
+                    "mode": mode,
+                    "evidence": evidence,
+                    "instructions": "Review the telemetry. State your diagnosis, confidence, and diagnostic action.",
+                })
+
+    Path(a.researcher_out).write_text(
+        json.dumps({"trial_count":len(researcher),"trials":researcher},indent=2),
+        encoding="utf-8"
+    )
+    Path(a.researcher_pool_out).write_text(
+        json.dumps({"schema_version":1,"participant_safe":False,
+                    "researcher_pool":True,"trial_count":len(researcher_pool),
+                    "trials":researcher_pool},indent=2),
+        encoding="utf-8"
+    )
+    Path(a.participant_pool_out).write_text(
+        json.dumps({"schema_version":1,"participant_safe":True,
+                    "participant_pool":True,"trial_count":len(pool),
+                    "trials":pool},indent=2),
+        encoding="utf-8"
+    )
     print(json.dumps({"cases":len(records),"validated_conditions":len(validated_conditions),
                       "researcher_trials":len(researcher),
                       "validated_pool_trials":len(pool)},indent=2))
