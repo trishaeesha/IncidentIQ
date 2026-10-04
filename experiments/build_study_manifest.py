@@ -92,13 +92,13 @@ def main():
                 if status=="VALIDATED":
                     pool_index+=1
                     pool.append({"trial_id":f"TRIAL-POOL-{pool_index:04d}",
-                        "public_case_id":public_case,"condition_key":condition,
+                        "public_case_id":public_case,
                         "mode":mode,"evidence":evidence,
                         "instructions":"Review the telemetry. State your diagnosis, confidence, and diagnostic action."})
 
     Path(a.researcher_out).write_text(json.dumps({"trial_count":len(researcher),"trials":researcher},indent=2),encoding="utf-8")
     Path(a.participant_pool_out).write_text(json.dumps({"schema_version":1,
-        "participant_safe":False,"participant_pool":True,"trial_count":len(pool),"trials":pool},indent=2),encoding="utf-8")
+        "participant_safe":True,"participant_pool":True,"trial_count":len(pool),"trials":pool},indent=2),encoding="utf-8")
     print(json.dumps({"cases":len(records),"validated_conditions":len(validated_conditions),
                       "researcher_trials":len(researcher),
                       "validated_pool_trials":len(pool)},indent=2))
