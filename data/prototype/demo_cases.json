@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "source": "validated RCAEval-derived evidence samples; demo UI input only",
+  "cases": [
+    {
+      "public_case_id": "CASE-01",
+      "evidence": [
+        {
+          "source": "metrics",
+          "service": "checkoutservice",
+          "observation": "checkoutservice_cpu changed after injection",
+          "direction": "increase",
+          "magnitude": 14.28861918854281,
+          "signal": "checkoutservice_cpu"
+        },
+        {
+          "source": "metrics",
+          "service": "checkoutservice",
+          "observation": "checkoutservice_latency-50 changed after injection",
+          "direction": "increase",
+          "magnitude": 0.0932200042606726,
+          "signal": "checkoutservice_latency-50"
+        },
+        {
+          "source": "metrics",
+          "service": "frontend-external",
+          "observation": "frontend-external_error changed after injection",
+          "direction": "increase",
+          "magnitude": 1.1073523809523809,
+          "signal": "frontend-external_error"
+        },
+        {
+          "source": "metrics",
+          "service": "redis",
+          "observation": "redis_diskio changed after injection",
+          "direction": "increase",
+          "magnitude": 1888.2991811348634,
+          "signal": "redis_diskio"
+        },
+        {
+          "source": "metrics",
+          "service": "checkoutservice",
+          "observation": "checkoutservice_latency-90 changed after injection",
+          "direction": "increase",
+          "magnitude": 0.16011472893876522,
+          "signal": "checkoutservice_latency-90"
+        },
+        {
+          "source": "metrics",
+          "service": "checkoutservice",
+          "observation": "checkoutservice_mem changed after injection",
+          "direction": "increase",
+          "magnitude": 4260943.644444443,
+          "signal": "checkoutservice_mem"
+        },
+        {
+          "source": "metrics",
+          "service": "recommendationservice",
+          "observation": "recommendationservice_workload changed after injection",
+          "direction": "decrease",
+          "magnitude": -4.179148611111115,
+          "signal": "recommendationservice_workload"
+        },
+        {
+          "source": "metrics",
+          "service": "shippingservice",
+          "observation": "shippingservice_workload changed after injection",
+          "direction": "decrease",
+          "magnitude": -1.7220968253968234,
+          "signal": "shippingservice_workload"
+        }
+      ]
+    },
+    {
+      "public_case_id": "CASE-02",
+      "evidence": [
+        {
+          "source": "metrics",
+          "service": "checkoutservice",
+          "observation": "checkoutservice_latency-90 changed after injection",
+          "direction": "increase",
+          "magnitude": 12.8552004084124,
+          "signal": "checkoutservice_latency-90"
+        },
+        {
+          "source": "logs",
+          "service": "checkoutservice",
+          "observation": "log rate changed after injection",
+          "direction": "decrease",
+          "magnitude": -0.42432390666048536,
+          "signal": "log_rate"
+        }
+      ]
+    },
+    {
+      "public_case_id": "CASE-03",
+      "evidence": [
+        {
+          "source": "metrics",
+          "service": "emailservice",
+          "observation": "emailservice_latency-90 changed after injection",
+          "direction": "increase",
+          "magnitude": 0.005015940624955952,
+          "signal": "emailservice_latency-90"
+        },
+        {
+          "source": "metrics",
+          "service": "checkoutservice",
+          "observation": "checkoutservice_latency-90 changed after injection",
+          "direction": "increase",
+          "magnitude": 3.9566685590929405,
+          "signal": "checkoutservice_latency-90"
+        },
+        {
+          "source": "metrics",
+          "service": "checkoutservice",
+          "observation": "checkoutservice_latency-50 changed after injection",
+          "direction": "increase",
+          "magnitude": 1.4383093849330502,
+          "signal": "checkoutservice_latency-50"
+        },
+        {
+          "source": "metrics",
+          "service": "checkoutservice",
+          "observation": "checkoutservice_workload changed after injection",
+          "direction": "decrease",
+          "magnitude": -0.3944811315302819,
+          "signal": "checkoutservice_workload"
+        },
+        {
+          "source": "metrics",
+          "service": "emailservice",
+          "observation": "emailservice_workload changed after injection",
+          "direction": "decrease",
+          "magnitude": -0.3940555073971337,
+          "signal": "emailservice_workload"
+        },
+        {
+          "source": "metrics",
+          "service": "paymentservice",
+          "observation": "paymentservice_workload changed after injection",
+          "direction": "decrease",
+          "magnitude": -0.3915747767765449,
+          "signal": "paymentservice_workload"
+        },
+        {
+          "source": "metrics",
+          "service": "paymentservice",
+          "observation": "paymentservice_latency-90 changed after injection",
+          "direction": "increase",
+          "magnitude": 0.001028486775096561,
+          "signal": "paymentservice_latency-90"
+        },
+        {
+          "source": "metrics",
+          "service": "frontend",
+          "observation": "frontend_latency-90 changed after injection",
+          "direction": "increase",
+          "magnitude": 0.026601970497318217,
+          "signal": "frontend_latency-90"
+        }
+      ]
+    },
+    {
+      "public_case_id": "CASE-04",
+      "evidence": [
+        {
+          "source": "metrics",
+          "service": "checkoutservice",
+          "observation": "checkoutservice_mem changed after injection",
+          "direction": "increase",
+          "magnitude": 179815769.5799687,
+          "signal": "checkoutservice_mem"
+        },
+        {
+          "source": "logs",
+          "service": null,
+          "observation": "error-like message frequency changed after injection",
+          "direction": "increase",
+          "magnitude": 0.011194029850746268,
+          "signal": "error_like"
+        }
+      ]
+    },
+    {
+      "public_case_id": "CASE-05",
+      "evidence": [
+        {
+          "source": "metrics",
+          "service": "user",
+          "observation": "user_latency-90 changed after injection",
+          "direction": "increase",
+          "magnitude": 0.9014135686731413,
+          "signal": "user_latency-90"
+        },
+        {
+          "source": "metrics",
+          "service": "user",
+          "observation": "user_latency-50 changed after injection",
+          "direction": "increase",
+          "magnitude": 0.17307608970077826,
+          "signal": "user_latency-50"
+        },
+        {
+          "source": "metrics",
+          "service": "orders",
+          "observation": "orders_latency-90 changed after injection",
+          "direction": "increase",
+          "magnitude": 1.8206747860239558,
+          "signal": "orders_latency-90"
+        },
+        {
+          "source": "metrics",
+          "service": "orders",
+          "observation": "orders_latency-50 changed after injection",
+          "direction": "increase",
+          "magnitude": 0.5029263725178902,
+          "signal": "orders_latency-50"
+        },
+        {
+          "source": "metrics",
+          "service": "front-end",
+          "observation": "front-end_latency-90 changed after injection",
+          "direction": "increase",
+          "magnitude": 0.30238028105587644,
+          "signal": "front-end_latency-90"
+        },
+        {
+          "source": "metrics",
+          "service": "front-end",
+          "observation": "front-end_socket changed after injection",
+          "direction": "increase",
+          "magnitude": 14.03982316227462,
+          "signal": "front-end_socket"
+        },
+        {
+          "source": "metrics",
+          "service": "front-end",
+          "observation": "front-end_mem changed after injection",
+          "direction": "increase",
+          "magnitude": 105830576.19775003,
+          "signal": "front-end_mem"
+        },
+        {
+          "source": "metrics",
+          "service": "user",
+          "observation": "user_workload changed after injection",
+          "direction": "decrease",
+          "magnitude": -15.138876128833411,
+          "signal": "user_workload"
+        }
+      ]
+    }
+  ]
+}
