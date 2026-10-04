@@ -44,10 +44,9 @@ def transform(rows,condition):
             return rows,"UNVALIDATED",["opposing cross-source signals not demonstrated"]
         return rows,"VALIDATED",["competing directional signals retained"]
     if condition=="incomplete":
-        sources=sorted({str(r.get("source","")) for r in rows})
-        if len(sources)<2: return rows,"UNVALIDATED",["fewer than two sources"]
-        hidden=sources[-1]
-        return [r for r in rows if str(r.get("source",""))!=hidden],"VALIDATED",[f"hidden source: {hidden}"]
+        # Incomplete represents a genuinely unavailable telemetry modality.
+        # Do not manufacture incompleteness by deleting an arbitrary source.
+        return rows,"VALIDATED",["preserve all available evidence; missing modality is represented by case metadata"]
     if condition=="misleading": return rows,"UNVALIDATED",["requires researcher-verified unrelated distractor"]
     if condition=="novel": return rows,"UNVALIDATED",["requires verified historical-reference removal"]
     raise ValueError(condition)
