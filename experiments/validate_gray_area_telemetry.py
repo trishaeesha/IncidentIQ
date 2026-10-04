@@ -145,15 +145,27 @@ def validate(
         ]
 
     if condition == "conflicting":
-        sources = {str(r.get("source")) for r in rows if r.get("source")}
-        directions = {str(r.get("direction", "")).lower() for r in rows}
-        positive = directions & {"increase", "increased", "elevated", "high"}
-        negative = directions & {"decrease", "decreased", "normal", "stable", "unchanged", "low"}
+        scoped = [r for r in rows if any(_ref_matches(ref, r) for ref in refs if not ref.startswith("manifest:"))]
+        sources = {str(r.get("source")) for r in scoped if r.get("source")}
         if len(sources) < 2:
-            return "REJECTED", ["fewer than two telemetry sources"]
-        if not positive or not negative:
-            return "REJECTED", ["no opposing observed directions"]
-        return "VALIDATED", ["opposing directions observed across at least two sources"]
+            return "REJECTED", ["fewer than two declared telemetry sources"]
+        strengths = {"strong": 2, "moderate": 1, "weak": 0}
+        for left in scoped:
+            for right in scoped:
+                if left is right or left.get("service") != right.get("service"):
+                    continue
+                if left.get("source") == right.get("source"):
+                    continue
+                if left.get("direction") == right.get("direction"):
+                    continue
+                if strengths.get(str(left.get("strength")), 0) < 1 or strengths.get(str(right.get("strength")), 0) < 1:
+                    continue
+                return "VALIDATED", [
+                    "declared conflicting refs resolved to telemetry",
+                    "opposing directions occur for the same service across different sources",
+                    "both conflicting observations are at least moderate strength",
+                ]
+        return "REJECTED", ["no semantically paired opposing observations across sources"]
 
     if condition == "incomplete":
         # Incomplete must represent a real missing modality, not an arbitrary
@@ -174,7 +186,26 @@ def validate(
         ]
 
     if condition == "misleading":
-        return "UNVALIDATED", ["requires an independently documented distractor unrelated to the evaluator root cause"]
+        if not metadata_row:
+            return "REJECTED", ["RCAEval case-index metadata required to identify evaluator root service"]
+        root = str(metadata_row.get("root_cause_service") or "").lower()
+        scoped = [r for r in rows if any(_ref_matches(ref, r) for ref in refs if not ref.startswith("manifest:"))]
+        if not root:
+            return "REJECTED", ["missing evaluator root service"]
+        if not scoped:
+            return "REJECTED", ["declared distractor refs did not resolve"]
+        if any(str(r.get("service") or "").lower() == root for r in scoped):
+            return "REJECTED", ["distractor includes the evaluator root service"]
+        if not candidate.get("misleading_signals"):
+            return "REJECTED", ["misleading condition must explicitly name the distractor signal"]
+        strengths = {"strong", "moderate"}
+        if not any(str(r.get("strength")) in strengths for r in scoped):
+            return "REJECTED", ["distractor is not at least moderate strength"]
+        return "VALIDATED", [
+            "declared distractor refs resolved to raw telemetry",
+            "distractor service differs from evaluator root service",
+            "distractor has at least moderate evidence strength",
+        ]
 
     if condition == "novel":
         return "UNVALIDATED", ["requires a separately validated historical similarity/reference corpus"]
