@@ -240,7 +240,7 @@ def _encoded_root_service(case_id: str) -> str | None:
     """
     import re
     m = re.match(
-        r"^re\\d+[a-z]+_(.+)_(?:cpu|mem|disk|delay|loss|socket)_\\d+$",
+        r"^re\d+[a-z]+_(.+)_(?:cpu|mem|disk|delay|loss|socket)_\d+$",
         str(case_id),
     )
     return m.group(1) if m else None
