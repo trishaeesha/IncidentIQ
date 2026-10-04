@@ -158,17 +158,18 @@ def validate(
         # Incomplete must represent a real missing modality, not an arbitrary
         # deletion of an available evidence source. The candidate currently
         # targets RE2-SS, where RCAEval metadata explicitly records no traces.
-        if not metadata_row:
-            return "REJECTED", ["RCAEval metadata row required to establish missing modality"]
-        if metadata_row.get("has_traces") is not False:
-            return "REJECTED", ["candidate requires has_traces=false in RCAEval metadata"]
         sources = {str(r.get("source")) for r in rows if r.get("source")}
         if "metrics" not in sources or "logs" not in sources:
             return "REJECTED", ["expected both metrics and logs to be observable while traces are absent"]
+        # The raw case layout is authoritative for modality availability. Metadata
+        # is optional corroboration and must never substitute for the files.
+        traces_available = metadata_row.get("has_traces") if metadata_row else None
+        if traces_available is True:
+            return "REJECTED", ["metadata contradicts the required missing-traces condition"]
         return "VALIDATED", [
             "metrics and logs are observable in raw telemetry",
-            "RCAEval metadata confirms traces are unavailable",
-            "incomplete condition will preserve available evidence rather than hide an arbitrary source",
+            "no traces.parquet is present for the raw case",
+            "incomplete condition preserves all available evidence rather than hiding an arbitrary source",
         ]
 
     if condition == "misleading":
