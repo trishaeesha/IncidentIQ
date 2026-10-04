@@ -43,7 +43,7 @@ jobs:
           health=json.load(urllib.request.urlopen("http://127.0.0.1:8010/api/health"))
           assert health["status"]=="ok"
           cases=json.load(urllib.request.urlopen("http://127.0.0.1:8010/api/cases"))
-          assert len(cases['cases'])==5
+          assert len(cases["cases"])==5
           result=json.load(urllib.request.urlopen("http://127.0.0.1:8010/api/investigate/CASE-02"))
           assert result["research_integrity"]["ground_truth_in_pipeline"] is False
           assert result["decision"]["human_control_required"] is True
