@@ -61,8 +61,18 @@ function call(action,b,timeoutMs){
  var ctl=new AbortController();
  var tm=setTimeout(function(){ctl.abort();},timeoutMs);
  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({action:action},b)),signal:ctl.signal})
- .then(function(r){return r.json();})
- .then(function(j){if(!j.ok)throw new Error(j.error||"Request failed");return j;})
+ .then(function(r){
+  return r.text().then(function(raw){
+   var j;
+   try{j=JSON.parse(raw);}catch(e){
+    var preview=String(raw||"").replace(/\\s+/g," ").slice(0,240);
+    throw new Error("Backend returned non-JSON (HTTP "+r.status+"). "+(preview||"Empty response"));
+   }
+   if(!r.ok)throw new Error(j.error||("HTTP "+r.status));
+   if(!j.ok)throw new Error(j.error||"Request failed");
+   return j;
+  });
+ })
  .catch(function(e){if(e.name==="AbortError")throw new Error("The study server took too long to respond. Please try again.");throw e;})
  .then(function(j){clearTimeout(tm);return j;},function(e){clearTimeout(tm);throw e;});
 }
