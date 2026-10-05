@@ -127,12 +127,12 @@ function draw(){
  html+="</div>";
  html+="<h3>How confident are you?</h3><div class=\"scale\">";
  html+=[1,2,3,4,5].map(function(n){
-  return "<label class=\""+(a.confidence==n?"selected":"")+""><input type=\"radio\" name=\"c\" value=\""+n+"\" "+(a.confidence==n?"checked":"")+\"><span>"+n+"<small>"+["Not confident","Low","Moderate","High","Very confident"][n-1]+"</small></span></label>";
+  return "<label class=\""+(a.confidence==n?"selected":"")+"\"><input type=\"radio\" name=\"c\" value=\""+n+"\" "+(a.confidence==n?"checked":"")+"\"><span>"+n+"<small>"+["Not confident","Low","Moderate","High","Very confident"][n-1]+"</small></span></label>";
  }).join("");
  html+="</div>";
  html+="<h3>How much workload did this trial require?</h3><div class=\"scale\">";
  html+=[1,2,3,4,5].map(function(n){
-  return "<label class=\""+(a.workload==n?"selected":"")+""><input type=\"radio\" name=\"w\" value=\""+n+"\" "+(a.workload==n?"checked":"")+\"><span>"+n+"<small>"+["Very low","Low","Moderate","High","Very high"][n-1]+"</small></span></label>";
+  return "<label class=\""+(a.workload==n?"selected":"")+"\"><input type=\"radio\" name=\"w\" value=\""+n+"\" "+(a.workload==n?"checked":"")+"\"><span>"+n+"<small>"+["Very low","Low","Moderate","High","Very high"][n-1]+"</small></span></label>";
  }).join("");
  html+="</div>";
  if(t.assistance){
