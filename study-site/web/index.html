@@ -1,1 +1,92 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IncidentIQ Study</title><style>:root{font-family:system-ui;background:#070a0f;color:#edf2f7}body{margin:0;background:radial-gradient(circle at 20% 0,#142333,#070a0f 55%);min-height:100vh}.top{padding:18px 6%;border-bottom:1px solid #26303d;display:flex;justify-content:space-between}.top b{letter-spacing:2px}.top b span{color:#75e1bf}.top a{color:#9aa7b8}.card{max-width:850px;margin:30px auto;padding:28px;background:#0d131b;border:1px solid #273241;border-radius:18px;width:92%;box-sizing:border-box}.muted{color:#8290a3;font-size:13px}.notice,.evidence,.assist{background:#090e15;border:1px solid #293543;padding:15px;border-radius:12px;margin:16px 0}.assist{border-color:#386557}.options{display:grid;gap:10px}.option{padding:14px;border:1px solid #2b3746;border-radius:11px;background:#0a1017;display:flex;gap:10px}.option:has(input:checked){border-color:#75e1bf;background:#10231e}.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.scale label{text-align:center}.scale span{display:block;padding:11px 3px;border:1px solid #2b3746;border-radius:10px}.scale input:checked+span{border-color:#75e1bf;background:#10231e}.scale small{display:block;color:#8290a3;font-size:9px;margin-top:4px}button{background:#75e1bf;color:#06110d;border:0;padding:13px 19px;border-radius:10px;font-weight:800;margin-top:20px;cursor:pointer}.progress{color:#75e1bf;font-size:11px;letter-spacing:2px;font-weight:800}.id{padding:14px;background:#10231e;border:1px solid #386557;border-radius:10px;display:inline-block}h1{font-size:clamp(28px,6vw,46px)}h3{margin-top:28px}@media(max-width:600px){.scale small{display:none}}</style></head><body><div class="top"><b>INCIDENT<span>IQ</span></b><a href="coordinator.html">Coordinator</a></div><main id="app"></main><script src="config.js"></script><script>const API=INCIDENTIQ_CONFIG.API_BASE,A=document.getElementById('app');let s={trialStartedAt:Date.now()};const esc=x=>String(x??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));async function call(action,b={}){if(!API||API.includes('PASTE_'))throw Error('Backend URL is not configured yet.');const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,...b})});const j=await r.json();if(!j.ok)throw Error(j.error||'Request failed');return j}function page(x){A.innerHTML='<section class="card">'+x+'</section>'}const TEST=new URLSearchParams(location.search).get('mode')==='test';function home(){page('<div class="progress">CONTROLLED RESEARCH STUDY</div><h1>Incident investigation</h1><p>Review five software incidents and choose the most defensible diagnosis from the evidence.</p><div class="notice">Do not enter your name or sensitive information. Your participant number is assigned automatically.</div><button onclick="start()">Start study</button><a href="?mode=test" style="display:inline-block;margin:20px 0 0 10px;color:#75e1bf">Run a private test</a><p class="muted">One common QR/link is used for everyone. The server assigns the next available slot. Test mode never reserves P01–P30.</p>')}async function start(){try{let q=localStorage.iiq;let j=TEST?await call('test'):q?await call('resume',JSON.parse(q)):await call('reserve');s=j;if(!TEST)localStorage.iiq=JSON.stringify({participantId:j.participantId,token:j.token});s.i=0;s.answers={};s.trialStartedAt=Date.now();if(!TEST&&Array.isArray(j.completedTrials)&&j.completedTrials.length){const done=new Set(j.completedTrials.map(Number));const first=s.trials.findIndex(t=>!done.has(Number(t.trialIndex)));s.i=first<0?4:first;}draw()}catch(e){localStorage.removeItem('iiq');page('<h1>Cannot start</h1><p>'+esc(e.message)+'</p>')}}function draw(){let t=s.trials[s.i],a=s.answers[t.trialIndex]||{};let ai=t.assistance?'<div class="assist"><b>AI assistance</b><p>'+esc(t.assistance.text)+'</p>'+(t.assistance.highlight?'<div>'+esc(t.assistance.highlight)+'</div>':'')+(t.assistance.supporting?'<ul>'+t.assistance.supporting.map(esc).map(x=>'<li>'+x+'</li>').join('')+'</ul>':'')+'</div>':'';page('<div class="progress">'+(TEST?'TEST MODE · ':'')+'TRIAL '+(s.i+1)+' / 5</div><div class="muted">Participant: '+esc(s.participantId)+'</div><h1>'+esc(t.title)+'</h1><p>'+esc(t.incident)+'</p><div class="evidence">'+t.evidence.map(esc).map(x=>'<div>• '+x+'</div>').join('')+'</div>'+ai+'<h3>Diagnosis</h3><div class="options">'+t.options.map(o=>'<label class="option"><input type="radio" name="d" value="'+esc(o)+'" '+(a.diagnosis===o?'checked':'')+'>'+esc(o)+'</label>').join('')+'</div><h3>How confident are you?</h3><div class="scale">'+[1,2,3,4,5].map(n=>'<label><input type="radio" name="c" value="'+n+'" '+(a.confidence==n?'checked':'')+'><span>'+n+'<small>'+['Not confident','Low','Moderate','High','Very confident'][n-1]+'</small></span></label>').join('')+'</div><h3>How much workload did this trial require?</h3><div class="scale">'+[1,2,3,4,5].map(n=>'<label><input type="radio" name="w" value="'+n+'" '+(a.workload==n?'checked':'')+'><span>'+n+'<small>'+['Very low','Low','Moderate','High','Very high'][n-1]+'</small></span></label>').join('')+'</div>'+(t.assistance?'<div class="notice"><b>Use of assistance</b><p><label><input id="f" type="checkbox"> I followed the assistance</label></p><p><label><input id="o" type="checkbox"> I overrode the assistance</label></p></div>':'')+'<button onclick="next()">'+(s.i===4?'Finish study':'Save & Next')+'</button>')}function checkReady(){let b=document.getElementById('nextBtn');if(!b)return;let d=document.querySelector('input[name=d]:checked'),c=document.querySelector('input[name=c]:checked'),w=document.querySelector('input[name=w]:checked');b.disabled=!(d&&c&&w);b.style.opacity=b.disabled?'0.45':'1'}async function next(){if(window.submitting)return;let t=s.trials[s.i],d=document.querySelector('input[name=d]:checked')?.value,c=Number(document.querySelector('input[name=c]:checked')?.value),w=Number(document.querySelector('input[name=w]:checked')?.value);if(!d||!c||!w)return alert('Please select diagnosis, confidence and workload.');window.submitting=true;document.getElementById('nextBtn').disabled=true;try{if(TEST)await call('saveTest',{testId:s.testId,trialIndex:t.trialIndex,caseId:t.caseId,condition:t.condition,diagnosis:d,confidence:c,workload:w,elapsedSeconds:Math.max(0,Math.round((Date.now()-s.trialStartedAt)/1000)),aiFollowed:!!document.getElementById('f')?.checked,aiOverridden:!!document.getElementById('o')?.checked});else await call('saveTrial',{participantId:s.participantId,token:s.token,trialIndex:t.trialIndex,caseId:t.caseId,diagnosis:d,confidence:c,workload:w,elapsedSeconds:Math.max(0,Math.round((Date.now()-s.trialStartedAt)/1000)),aiFollowed:!!document.getElementById('f')?.checked,aiOverridden:!!document.getElementById('o')?.checked});if(s.i===4){if(!TEST){await call('finalize',{participantId:s.participantId,token:s.token});localStorage.removeItem('iiq')}page('<div style="text-align:center"><div class="progress">SUBMISSION COMPLETE</div><h1>Thank you.</h1><p>Your five trials were recorded.</p><div class="id">Participant ID: <b>'+esc(s.participantId)+'</b></div></div>')}else{s.i++;s.trialStartedAt=Date.now();draw()}}catch(e){alert(e.message);window.submitting=false;checkReady()}finally{if(!document.querySelector('.progress')?.textContent.includes('SUBMISSION COMPLETE')){window.submitting=false;checkReady()}}}document.addEventListener('change',checkReady);home();</script></body></html>
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IncidentIQ Study</title>
+<style>
+:root{font-family:system-ui;background:#070a0f;color:#edf2f7}body{margin:0;background:radial-gradient(circle at 20% 0,#142333,#070a0f 55%);min-height:100vh}.top{padding:18px 6%;border-bottom:1px solid #26303d;display:flex;justify-content:space-between}.top b{letter-spacing:2px}.top b span{color:#75e1bf}.top a{color:#9aa7b8}.card{max-width:850px;margin:30px auto;padding:28px;background:#0d131b;border:1px solid #273241;border-radius:18px;width:92%;box-sizing:border-box}.muted{color:#8290a3;font-size:13px}.notice,.evidence,.assist{background:#090e15;border:1px solid #293543;padding:15px;border-radius:12px;margin:16px 0}.assist{border-color:#386557}.options{display:grid;gap:10px}.option{padding:14px;border:1px solid #2b3746;border-radius:11px;background:#0a1017;display:flex;gap:10px}.option:has(input:checked){border-color:#75e1bf;background:#10231e}.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.scale label{text-align:center}.scale span{display:block;padding:11px 3px;border:1px solid #2b3746;border-radius:10px}.scale input:checked+span{border-color:#75e1bf;background:#10231e}.scale small{display:block;color:#8290a3;font-size:9px;margin-top:4px}button{background:#75e1bf;color:#06110d;border:0;padding:13px 19px;border-radius:10px;font-weight:800;margin-top:20px;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}.progress{color:#75e1bf;font-size:11px;letter-spacing:2px;font-weight:800}.id{padding:14px;background:#10231e;border:1px solid #386557;border-radius:10px;display:inline-block}h1{font-size:clamp(28px,6vw,46px)}h3{margin-top:28px}@media(max-width:600px){.scale small{display:none}}
+</style></head>
+<body><div class="top"><b>INCIDENT<span>IQ</span></b><a href="coordinator.html">Coordinator</a></div><main id="app"></main>
+<script src="config.js"></script><script>
+const API=window.INCIDENTIQ_CONFIG?.API_BASE||"",A=document.getElementById("app");
+let s={trialStartedAt:Date.now(),answers:{}},submitting=false;
+const TEST=new URLSearchParams(location.search).get("mode")==="test";
+const esc=x=>String(x??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const CASES=[
+{id:"CASE-01",condition:"clear",title:"Checkout latency and CPU saturation",incident:"Checkout requests are failing or becoming slow during the incident window.",evidence:["checkoutservice CPU rises sharply after the injection.","checkoutservice latency-90 also increases.","The strongest abnormality is localized to checkoutservice CPU."],options:["Checkoutservice CPU/resource saturation","Emailservice latency issue"]},
+{id:"CASE-02",condition:"ambiguous",title:"Checkout memory pressure with error-like logs",incident:"Checkout performance degrades, but the evidence does not cleanly isolate one explanation.",evidence:["checkoutservice memory changes after injection.","Error-like log activity is also present.","Both signals are plausible, so further verification is warranted."],options:["Checkoutservice memory/resource pressure","Frontend error increase"]},
+{id:"CASE-03",condition:"conflicting",title:"Checkout packet-loss incident",incident:"Checkout latency rises while log-rate evidence points in a competing direction.",evidence:["checkoutservice latency-90 increases after injection.","checkoutservice log-rate evidence changes as well.","The two evidence sources do not independently justify the same conclusion."],options:["Checkoutservice network packet loss","Emailservice latency issue"]},
+{id:"CASE-04",condition:"misleading",title:"Distracting emailservice latency",incident:"A visible latency change appears in emailservice, but it is not the injected root cause.",evidence:["emailservice latency-90 changes after injection.","The visible emailservice signal is a distractor.","The actual fault is associated with checkoutservice network loss."],options:["Emailservice latency is the root cause","Checkoutservice network packet loss"]},
+{id:"CASE-05",condition:"incomplete",title:"User-service packet loss with missing telemetry",incident:"The user service is affected, but one telemetry source is unavailable.",evidence:["user-service incident evidence indicates network loss.","Metrics and logs are available.","Trace telemetry is unavailable, so the evidence is incomplete."],options:["User-service network packet loss","User-service memory stress"]}
+];
+function page(x){A.innerHTML='<section class="card">'+x+"</section>";checkReady()}
+async function call(action,b={},timeoutMs=30000){
+ if(!API||API.includes("PASTE_"))throw Error("Backend URL is not configured.");
+ const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),timeoutMs);
+ try{
+  const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,...b}),signal:ctl.signal});
+  const j=await r.json();if(!j.ok)throw Error(j.error||"Request failed");return j;
+ }catch(e){if(e.name==="AbortError")throw Error("The study server took too long to respond. Please try again.");throw e}
+ finally{clearTimeout(tm)}
+}
+function localTrial(c,i,arm){
+ const x={trialIndex:i+1,caseId:c.id,condition:c.condition,title:c.title,incident:c.incident,evidence:c.evidence,options:c.options};
+ if(arm==="generic_ai")x.assistance={text:"The strongest salient observation is highlighted. Treat it as one input, not guaranteed truth.",highlight:c.evidence[0]};
+ if(arm==="incidentiq")x.assistance={text:"Evidence-grounded assistance: compare supporting and contradictory evidence before deciding.",supporting:c.evidence.slice(0,2),uncertainty:c.condition==="clear"?"low":"elevated"};
+ return x;
+}
+function home(){page('<div class="progress">CONTROLLED RESEARCH STUDY</div><h1>Incident investigation</h1><p>Review five software incidents and choose the most defensible diagnosis from the evidence.</p><div class="notice">Do not enter your name or sensitive information. Your participant number is assigned automatically.</div><button onclick="start()">Start study</button> <a href="?mode=test" style="color:#75e1bf">Run a private test</a><p class="muted">Test mode never reserves P01–P30.</p>')}
+async function start(){
+ if(submitting)return;submitting=true;
+ try{
+  let j;
+  if(TEST){
+   const testId="TEST-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);
+   j={ok:true,test:true,participantId:"TEST",testId,token:"TEST-ONLY",completedTrials:[],trials:CASES.map((c,i)=>localTrial(c,i,"incidentiq"))};
+  }else{
+   let q=localStorage.getItem("iiq");
+   j=q?await call("resume",JSON.parse(q)):await call("reserve");
+   localStorage.setItem("iiq",JSON.stringify({participantId:j.participantId,token:j.token}));
+  }
+  s={...j,i:0,answers:{},trialStartedAt:Date.now()};draw();
+ }catch(e){if(!TEST)localStorage.removeItem("iiq");page("<h1>Cannot start</h1><p>"+esc(e.message)+"</p><button onclick='home()'>Back</button>")}
+ finally{submitting=false}
+}
+function draw(){
+ const t=s.trials[s.i],a=s.answers[t.trialIndex]||{};
+ const ai=t.assistance?'<div class="assist"><b>AI assistance</b><p>'+esc(t.assistance.text)+'</p>'+(t.assistance.highlight?"<div>"+esc(t.assistance.highlight)+"</div>":"")+(t.assistance.supporting?"<ul>"+t.assistance.supporting.map(esc).map(x=>"<li>"+x+"</li>").join("")+"</ul>":"")+"</div>":"";
+ page('<div class="progress">'+(TEST?"TEST MODE · ":"")+"TRIAL "+(s.i+1)+" / 5</div><div class="muted">Participant: "+esc(s.participantId)+"</div><h1>"+esc(t.title)+"</h1><p>"+esc(t.incident)+"</p><div class="evidence">"+t.evidence.map(esc).map(x=>"<div>• "+x+"</div>").join("")+"</div>"+ai+
+ '<h3>Diagnosis</h3><div class="options">'+t.options.map(o=>'<label class="option"><input type="radio" name="d" value="'+esc(o)+'" '+(a.diagnosis===o?"checked":"")+'>'+esc(o)+"</label>").join("")+"</div>"+
+ '<h3>How confident are you?</h3><div class="scale">'+[1,2,3,4,5].map(n=>'<label><input type="radio" name="c" value="'+n+'" '+(a.confidence==n?"checked":"")+'><span>'+n+"<small>"+["Not confident","Low","Moderate","High","Very confident"][n-1]+"</small></span></label>").join("")+"</div>"+
+ '<h3>How much workload did this trial require?</h3><div class="scale">'+[1,2,3,4,5].map(n=>'<label><input type="radio" name="w" value="'+n+'" '+(a.workload==n?"checked":"")+'><span>'+n+"<small>"+["Very low","Low","Moderate","High","Very high"][n-1]+"</small></span></label>").join("")+"</div>"+
+ (t.assistance?'<div class="notice"><b>Use of assistance</b><p><label><input id="f" type="checkbox"> I followed the assistance</label></p><p><label><input id="o" type="checkbox"> I overrode the assistance</label></p></div>':"")+
+ '<button id="nextBtn" disabled onclick="next()">'+(s.i===4?"Finish study":"Save & Next")+"</button>");
+}
+function checkReady(){
+ const b=document.getElementById("nextBtn");if(!b)return;
+ const d=document.querySelector('input[name="d"]:checked'),c=document.querySelector('input[name="c"]:checked'),w=document.querySelector('input[name="w"]:checked');
+ b.disabled=!(d&&c&&w);
+}
+async function next(){
+ if(submitting)return;
+ const t=s.trials[s.i],d=document.querySelector('input[name="d"]:checked')?.value,c=Number(document.querySelector('input[name="c"]:checked')?.value),w=Number(document.querySelector('input[name="w"]:checked')?.value);
+ if(!d||!c||!w)return;
+ s.answers[t.trialIndex]={diagnosis:d,confidence:c,workload:w,aiFollowed:!!document.getElementById("f")?.checked,aiOverridden:!!document.getElementById("o")?.checked};
+ const answer=s.answers[t.trialIndex];
+ submitting=true;const b=document.getElementById("nextBtn");if(b){b.disabled=true;b.textContent=s.i===4?"Submitting…":"Saving…";}
+ try{
+  if(TEST){
+   await call("saveTest",{testId:s.testId,trialIndex:t.trialIndex,caseId:t.caseId,condition:t.condition,...answer,elapsedSeconds:Math.max(0,Math.round((Date.now()-s.trialStartedAt)/1000))});
+  }else{
+   await call("saveTrial",{participantId:s.participantId,token:s.token,trialIndex:t.trialIndex,caseId:t.caseId,...answer,elapsedSeconds:Math.max(0,Math.round((Date.now()-s.trialStartedAt)/1000))});
+  }
+  if(s.i===4){
+   if(!TEST){await call("finalize",{participantId:s.participantId,token:s.token});localStorage.removeItem("iiq")}
+   page('<div style="text-align:center"><div class="progress">SUBMISSION COMPLETE</div><h1>Thank you.</h1><p>Your five trials were recorded.</p><div class="id">Participant ID: <b>'+esc(s.participantId)+"</b></div></div>");
+  }else{s.i++;s.trialStartedAt=Date.now();draw();}
+ }catch(e){
+  if(b){b.disabled=false;b.textContent=s.i===4?"Finish study":"Save & Next";}
+  alert(e.message);
+ }finally{submitting=false;}
+}
+document.addEventListener("change",checkReady);
+home();
+</script></body></html>
