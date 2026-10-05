@@ -94,16 +94,30 @@ function start(){
  var j;
  try{
   if(TEST){
-   var testId="TEST-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);
-   j={ok:true,test:true,participantId:"TEST",testId:testId,token:"TEST-ONLY",completedTrials:[],trials:CASES.map(function(c,i){return localTrial(c,i,"incidentiq");})};
-   s=Object.assign({},j,{i:0,answers:{},trialStartedAt:Date.now()});
-   draw();submitting=false;return;
+   call("test").then(function(resp){
+    s=Object.assign({},resp,{i:0,answers:{},trialStartedAt:Date.now()});
+    draw();
+   }).catch(function(e){
+    page("<h1>Test cannot start</h1><p>"+esc(e.message)+"</p><button onclick='home()'>Back</button>");
+   }).then(function(){submitting=false;});
+   return;
   }
   var q=localStorage.getItem("iiq");
   var req=q?call("resume",JSON.parse(q)):call("reserve");
   req.then(function(resp){
    localStorage.setItem("iiq",JSON.stringify({participantId:resp.participantId,token:resp.token}));
    s=Object.assign({},resp,{i:0,answers:{},trialStartedAt:Date.now()});
+   var done=Array.isArray(resp.completedTrials)?resp.completedTrials:[];
+   if(done.length>=5){
+    return call("finalize",{participantId:resp.participantId,token:resp.token}).then(function(){
+     localStorage.removeItem("iiq");
+     page('<div style="text-align:center"><div class="progress">SUBMISSION COMPLETE</div><h1>Thank you.</h1><p>Your five trials were already recorded.</p><div class="id">Participant ID: <b>'+esc(resp.participantId)+"</b></div></div>");
+    });
+   }
+   var first=0;
+   while(first<5&&done.indexOf(s.trials[first].trialIndex)>=0)first++;
+   s.i=first;
+   s.trialStartedAt=Date.now();
    draw();
   }).catch(function(e){
    localStorage.removeItem("iiq");
@@ -173,7 +187,7 @@ function next(){
  var answer=s.answers[t.trialIndex];
  submitting=true;
  var b=document.getElementById("nextBtn");
- if(b){b.disabled=true;b.textContent=s.i===4?"Submitting…":"Saving…";}
+ if(b){b.disabled=true;b.textContent=s.i===4?(TEST?"Saving test…":"Submitting…"):"Saving…";}
  var done=function(){
   if(s.i===4){
    if(!TEST){
@@ -183,12 +197,16 @@ function next(){
     }).catch(function(e){if(b){b.disabled=false;b.textContent="Finish study";}alert(e.message);}).then(function(){submitting=false;});
     return;
    }
-   page('<div style="text-align:center"><div class="progress">PRIVATE TEST COMPLETE</div><h1>Test complete.</h1><p>This private test did not reserve or save any participant slot.</p><div class="id">Participant ID: <b>TEST</b></div><p><a href="?mode=test" style="color:#75e1bf">Run test again</a></p></div>');
+   page('<div style="text-align:center"><div class="progress">PRIVATE TEST COMPLETE</div><h1>Test complete.</h1><p>Your five test trials were stored separately from real participants.</p><div class="id">Test ID: <b>'+esc(s.testId)+'</b></div><p><a href="?mode=test" style="color:#75e1bf">Run test again</a></p></div>');
    submitting=false;return;
   }
   s.i++;s.trialStartedAt=Date.now();draw();submitting=false;
  };
- if(TEST){setTimeout(done,120);return;}
+ if(TEST){
+  call("saveTest",{testId:s.testId,trialIndex:t.trialIndex,caseId:t.caseId,condition:t.condition,diagnosis:answer.diagnosis,confidence:answer.confidence,workload:answer.workload,aiFollowed:answer.aiFollowed,aiOverridden:answer.aiOverridden,elapsedSeconds:Math.max(0,Math.round((Date.now()-s.trialStartedAt)/1000))})
+   .then(done).catch(function(e){if(b){b.disabled=false;b.textContent=s.i===4?"Finish test":"Save & Next";}alert(e.message);submitting=false;});
+  return;
+ }
  call("saveTrial",{participantId:s.participantId,token:s.token,trialIndex:t.trialIndex,caseId:t.caseId,diagnosis:answer.diagnosis,confidence:answer.confidence,workload:answer.workload,aiFollowed:answer.aiFollowed,aiOverridden:answer.aiOverridden,elapsedSeconds:Math.max(0,Math.round((Date.now()-s.trialStartedAt)/1000))})
  .then(done).catch(function(e){if(b){b.disabled=false;b.textContent=s.i===4?"Finish study":"Save & Next";}alert(e.message);submitting=false;});
 }
