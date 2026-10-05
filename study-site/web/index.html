@@ -74,7 +74,8 @@ async function next(){
  submitting=true;const b=document.getElementById("nextBtn");if(b){b.disabled=true;b.textContent=s.i===4?"Submitting…":"Saving…";}
  try{
   if(TEST){
-   await call("saveTest",{testId:s.testId,trialIndex:t.trialIndex,caseId:t.caseId,condition:t.condition,...answer,elapsedSeconds:Math.max(0,Math.round((Date.now()-s.trialStartedAt)/1000))});
+   // Private test is completely local: it must never depend on the study backend.
+   await new Promise(resolve=>setTimeout(resolve,120));
   }else{
    await call("saveTrial",{participantId:s.participantId,token:s.token,trialIndex:t.trialIndex,caseId:t.caseId,...answer,elapsedSeconds:Math.max(0,Math.round((Date.now()-s.trialStartedAt)/1000))});
   }
