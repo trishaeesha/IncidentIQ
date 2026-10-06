@@ -1,0 +1,102 @@
+name: IncidentIQ Step 1 Real RCAEval Cases
+
+on:
+  push:
+    branches:
+      - "integration/step1-real-rcaeval-case"
+  workflow_dispatch:
+
+jobs:
+  real-case-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        case:
+          - re2ob_checkoutservice_cpu_2
+          - re2ob_checkoutservice_mem_2
+          - re2ss_user_loss_1
+          - re2ss_catalogue_loss_1
+          - re2ob_emailservice_socket_1
+          - re2ss_orders_mem_1
+          - re2ss_payment_cpu_1
+          - re2ss_user_delay_1
+          - re2tt_ts-route-service_loss_1
+          - re2tt_ts-route-service_socket_1
+          - re2tt_ts-order-service_mem_1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install project dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate evaluation framework
+        run: python experiments/self_test.py
+
+      - name: Validate deployment module
+        run: pytest -q tests/test_api.py tests/test_rcaeval_trace_schema.py
+
+      - name: Run unit regression tests
+        run: pytest -q tests/test_rcaeval_trace_schema.py
+
+      - name: Download selected public RCAEval case
+        env:
+          CASE_ID: ${{ matrix.case }}
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+          case = os.environ["CASE_ID"]
+          snapshot_download(
+              repo_id="phamquiluan/RCAEval",
+              repo_type="dataset",
+              allow_patterns=[f"{case}/*"],
+              local_dir="rcaeval_ci",
+          )
+          PY
+
+      - name: Inspect downloaded telemetry layout
+        run: find rcaeval_ci -type f -maxdepth 4 -print
+
+      - name: Inspect telemetry schemas
+        env:
+          CASE_ID: ${{ matrix.case }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import pandas as pd
+          root = Path("rcaeval_ci") / os.environ["CASE_ID"]
+          for name in ("metrics.parquet", "logs.parquet", "traces.parquet"):
+              p = root / name
+              if p.exists():
+                  df = pd.read_parquet(p)
+                  print(name, "columns=", list(df.columns))
+                  print(name, "rows=", len(df))
+                  for col in ("time","timestamp","startTime","start_time"):
+                      if col in df.columns:
+                          print(name, col, "min=", df[col].min(), "max=", df[col].max(), "dtype=", df[col].dtype)
+          PY
+
+      - name: Run real RCAEval case
+        env:
+          CASE_ID: ${{ matrix.case }}
+        run: |
+          python experiments/run_real_rcaeval_case.py --data-root "$GITHUB_WORKSPACE/rcaeval_ci" --case "$CASE_ID" | tee "step1_${CASE_ID}.json"
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: incidentiq-step1-${{ matrix.case }}
+          path: step1_${{ matrix.case }}.json
+
+# CI re-run after evaluation self-test integration.
+
+# rerun after evaluation test fixes

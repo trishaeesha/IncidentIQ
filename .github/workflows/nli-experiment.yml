@@ -1,0 +1,88 @@
+name: IncidentIQ Contextual NLI Experiment
+
+on:
+  push:
+    branches:
+      - "integration/step1-real-rcaeval-case"
+  workflow_dispatch:
+
+jobs:
+  nli-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install optional NLI dependencies
+        run: pip install -r requirements-nlp.txt pytest
+
+      - name: Run NLI unit tests
+        run: pytest -q tests/test_nli_evidence.py
+
+      - name: Install core dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download one real RCAEval case
+        run: |
+          python - <<'PY'
+          from huggingface_hub import snapshot_download
+          snapshot_download(
+              repo_id="phamquiluan/RCAEval",
+              repo_type="dataset",
+              allow_patterns=["re2ob_checkoutservice_cpu_2/*"],
+              local_dir="rcaeval_ci",
+          )
+          PY
+
+      - name: Run contextual relation smoke test
+        run: |
+          python - <<'PY'
+          from src.nlp import NLIEvidenceInterpreter
+          model = NLIEvidenceInterpreter()
+          examples = [
+              ("checkoutservice CPU utilization increased sharply after the incident started.",
+               "checkoutservice is experiencing resource saturation."),
+              ("checkoutservice CPU utilization remained stable.",
+               "checkoutservice is experiencing resource saturation."),
+              ("checkoutservice latency increased.",
+               "checkoutservice is experiencing resource saturation."),
+          ]
+          for evidence, hypothesis in examples:
+              result = model.classify(evidence, hypothesis)
+              print({
+                  "relation": result.relation,
+                  "score": round(result.score, 4),
+                  "evidence": evidence,
+                  "hypothesis": hypothesis,
+              })
+          PY
+
+      - name: Compare NLI relations on real incident evidence
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from src.data.rcaeval_loader import load_case_paths, read_injection_time
+          from src.evidence import extract_evidence
+          from src.models import HypothesisEngine
+          from src.nlp import NLIEvidenceInterpreter
+
+          root = Path("rcaeval_ci")
+          case = "re2ob_checkoutservice_cpu_2"
+          paths = load_case_paths(root, case)
+          injection = read_injection_time(root, case)
+          evidence = extract_evidence(case, injection, paths["metrics"], paths["logs"], paths["traces"])
+          evidence_dicts = [e.to_dict() for e in evidence]
+          hypotheses = HypothesisEngine().infer(evidence_dicts)["hypotheses"]
+          nli = NLIEvidenceInterpreter()
+          rows = []
+          for h in hypotheses[:3]:
+              for e in evidence_dicts[:8]:
+                  result = nli.classify(e["observation"], h["hypothesis"])
+                  rows.append({"hypothesis": h["hypothesis"], "relation": result.relation, "score": round(result.score, 4)})
+          print(json.dumps({"case": case, "relations": rows}, indent=2))
+          PY
