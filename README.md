@@ -59,7 +59,7 @@ The contribution must be demonstrated experimentally through human-AI diagnostic
 
 **Integration and research-validation phase.**
 
-The core runtime, research harness, NLI experiment, participant-data audit, and five-condition gray-area telemetry validation are implemented and verified to the extent documented below. The final five-case RCAEval scoring run and production-telemetry connection remain separate pending items.
+The core runtime, research harness, NLI experiment, participant-data audit, and five-condition gray-area telemetry validation are implemented and verified to the extent documented below. Broader RCAEval benchmarking and production-telemetry connection remain separate pending items.
 
 The agreed research setup is fixed. Implementation work should not silently change the research question, six incident conditions, three comparison modes, or primary evaluation metrics.
 
@@ -94,7 +94,7 @@ The current integration branch contains the core IncidentIQ runtime plus the res
 - Five gray-area telemetry cells are validated by GitHub Actions: clear, ambiguous, conflicting, incomplete, and misleading.
 - The novel/historical-mismatch sixth condition is explicitly excluded because no independent historical-similarity corpus was validated.
 - A 30-participant, five-case study export exists and has been audited, but it is a legacy five-condition study and must not be presented as the final six-condition study.
-- The five-case conflicted RCAEval scoring evaluation is not yet verified.
+- The final five-case RCAEval root-service scoring evaluation is verified: 2/5 exact matches (40% overall), with 1 abstention; this is a small case-specific result, not a general benchmark claim.
 - Production telemetry integration is not verified.
 
 The system does not perform autonomous remediation. Diagnostic recommendations remain human-controlled.
