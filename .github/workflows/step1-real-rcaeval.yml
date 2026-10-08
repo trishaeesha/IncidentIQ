@@ -1,4 +1,4 @@
-name: IncidentIQ Step 1 Real RCAEval Cases
+name: IncidentIQ Expanded RE2 RCAEval Evaluation
 
 on:
   push:
@@ -7,42 +7,84 @@ on:
   workflow_dispatch:
 
 jobs:
-  real-case-baseline:
+  prepare-matrix:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        case:
-          - re2ob_currencyservice_disk_3
-          - re2ob_emailservice_disk_2
-          - re2ob_emailservice_mem_2
-          - re2ob_emailservice_socket_3
-          - re2ob_recommendationservice_mem_3
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install dataset tooling
+        run: pip install pandas pyarrow huggingface_hub
+      - name: Build deterministic stratified case matrix
+        id: select
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from huggingface_hub import hf_hub_download
 
+          path = hf_hub_download(
+              repo_id="phamquiluan/RCAEval",
+              repo_type="dataset",
+              filename="cases.parquet",
+          )
+          df = pd.read_parquet(path)
+
+          selected = (
+              df[
+                  df["dataset"].isin(["RE2-OB", "RE2-SS", "RE2-TT"])
+                  & df["has_logs"].fillna(False)
+              ]
+              .sort_values(["dataset", "fault", "case"])
+              .groupby(["dataset", "fault"], as_index=False)
+              .first()
+          )
+
+          expected = {"RE2-OB": 6, "RE2-SS": 6, "RE2-TT": 6}
+          counts = selected["dataset"].value_counts().to_dict()
+          if counts != expected:
+              raise SystemExit(f"Unexpected stratification: {counts}")
+
+          cases = sorted(selected["case"].tolist())
+          if len(cases) != 18:
+              raise SystemExit(f"Expected 18 cases, got {len(cases)}")
+
+          print("Selected cases:")
+          for case in cases:
+              print(case)
+
+          with open("$GITHUB_OUTPUT", "a", encoding="utf-8") as out:
+              out.write("matrix=" + json.dumps({"case": cases}, separators=(",", ":")) + "\n")
+          PY
+
+  real-case-baseline:
+    needs: prepare-matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 18
+      matrix: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: Install project dependencies
         run: pip install -r requirements.txt
-
       - name: Run regression tests
         run: pytest -q tests/test_contextual_relation.py
-
       - name: Validate evaluation framework
         run: python experiments/self_test.py
-
       - name: Validate deployment module
         run: pytest -q tests/test_api.py tests/test_rcaeval_trace_schema.py
-
       - name: Run unit regression tests
         run: pytest -q tests/test_rcaeval_trace_schema.py
-
       - name: Download selected public RCAEval case
         env:
           CASE_ID: ${{ matrix.case }}
@@ -58,10 +100,8 @@ jobs:
               local_dir="rcaeval_ci",
           )
           PY
-
       - name: Inspect downloaded telemetry layout
         run: find rcaeval_ci -type f -maxdepth 4 -print
-
       - name: Inspect telemetry schemas
         env:
           CASE_ID: ${{ matrix.case }}
@@ -81,7 +121,6 @@ jobs:
                       if col in df.columns:
                           print(name, col, "min=", df[col].min(), "max=", df[col].max(), "dtype=", df[col].dtype)
           PY
-
       - name: Run real RCAEval case
         env:
           CASE_ID: ${{ matrix.case }}
@@ -89,7 +128,6 @@ jobs:
           set -o pipefail
           python experiments/run_real_rcaeval_case.py --data-root "$GITHUB_WORKSPACE/rcaeval_ci" --case "$CASE_ID" | tee "step1_${CASE_ID}.json"
           python -m json.tool "step1_${CASE_ID}.json" >/dev/null
-
       - name: Upload result
         uses: actions/upload-artifact@v4
         with:
@@ -129,14 +167,12 @@ jobs:
         run: |
           mkdir -p evaluator_results
           for f in results/step1_*.json; do
-            python experiments/score_rcaeval_result.py               --cases evaluator_data/cases.parquet               --result "$f" >> evaluator_results/root_service_scores.jsonl
+            python experiments/score_rcaeval_result.py \
+              --cases evaluator_data/cases.parquet \
+              --result "$f" >> evaluator_results/root_service_scores.jsonl
           done
       - name: Upload evaluator results
         uses: actions/upload-artifact@v4
         with:
           name: incidentiq-evaluator-results
           path: evaluator_results/root_service_scores.jsonl
-
-# CI re-run after evaluation self-test integration.
-
-# rerun after evaluation test fixes
