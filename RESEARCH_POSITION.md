@@ -1,14 +1,14 @@
-# IncidentIQ research position
+# IncidentIQ Research Position
 
-## Current contribution target
+## Contribution target
 
-IncidentIQ is evaluated as human-AI decision support for software incident troubleshooting, not as another autonomous RCA agent.
+IncidentIQ is evaluated as **human-AI decision support for software incident troubleshooting**, not as an autonomous RCA agent.
 
-Recent work already covers automated RCA, agentic troubleshooting, and recovery-action evaluation. For example, Microsoft research reports RCACopilot for automated RCA, StepFly for agentic troubleshooting-guide execution, and R2Act for diagnosis-to-recovery evaluation. Therefore IncidentIQ does not claim novelty from RCA, agentic tool use, cost-aware investigation, or abstention alone. citeturn0search11turn0search7turn0search1
+The project deliberately does not claim novelty from automated RCA, agentic troubleshooting, cost-aware investigation, or abstention alone. The intended contribution is the **evidence-grounded decision-support workflow** and its evaluation in terms of human diagnostic decision-making.
 
 ## Research question
 
-Under what software-incident conditions does evidence-grounded AI assistance improve or degrade human engineers' diagnostic decision-making?
+> Under what software-incident conditions does evidence-grounded AI assistance improve or degrade human engineers' diagnostic decision-making?
 
 ## Experimental comparison
 
@@ -18,14 +18,14 @@ Under what software-incident conditions does evidence-grounded AI assistance imp
 
 ## Incident conditions
 
-- clear
-- ambiguous
-- conflicting
-- incomplete
-- misleading
-- novel/historical mismatch (design condition, currently excluded from participant study)
+1. Clear / straightforward evidence
+2. Ambiguous evidence
+3. Conflicting telemetry
+4. Incomplete / missing evidence
+5. Misleading evidence
+6. Novel / historical mismatch
 
-Conditions are not inferred from RCAEval metadata alone. Each condition requires evidence-traceable researcher validation.
+The sixth condition is part of the final design but is currently excluded from the validated participant evidence because no independent historical-similarity/reference corpus was established.
 
 ## Primary outcomes
 
@@ -35,8 +35,8 @@ Conditions are not inferred from RCAEval metadata alone. Each condition requires
 - unnecessary actions
 - incorrect actions
 - verification time
+- AI-following and override
 - confidence/calibration
-- AI following and override
 - workload
 
 ## Integrity rule
@@ -45,4 +45,6 @@ RCAEval ground truth is evaluator-only. Participant-facing telemetry and AI outp
 
 ## Current evidence boundary
 
-Five gray-area conditions have passed raw-telemetry validation. The novel/historical-mismatch condition is not validated because no independent historical-similarity/reference corpus exists. The existing 30-participant export is a completed five-condition study and is not evidence for the excluded sixth condition.
+Five gray-area conditions passed raw-telemetry validation. The existing 30-participant export is a completed **five-condition historical study** and is not evidence for the excluded sixth condition.
+
+The defensible current contribution is therefore an executable, evidence-grounded, human-controlled troubleshooting workflow with bounded empirical evaluation—not a claim of general autonomous root-cause accuracy.
