@@ -78,7 +78,7 @@ Integrated:
 
 Raw RCAEval telemetry is intentionally not committed. Any real-case benchmark execution must download or provide the permitted telemetry at runtime.
 
-The five-case conflicted RCAEval evaluation is NOT VERIFIED unless the required telemetry is actually available and the validation script completes.
+The final five-case RCAEval evaluation is now verified on GitHub Actions run 37799770349 using actual RE2-OB telemetry. The five cases completed through the participant-safe pipeline and evaluator scoring completed successfully. Exact root-service match was 2/5 (40%) overall; one case abstained, so among the four non-abstained cases the exact-match rate was 2/4 (50%). This is a small, case-specific benchmark result and is not a claim of general RCA accuracy.
 
 ## Human participant study
 
@@ -129,7 +129,7 @@ The sixth novel/historical-mismatch condition is explicitly excluded from the pa
 The uploaded 30-participant export is a real, audited five-case study dataset: 27 participants are complete and 3 are incomplete. It is therefore valid evidence for that historical five-condition study, but it does not satisfy the frozen six-condition final design and must be reported with that limitation.
 
 The remaining scientific work is intentionally limited to:
-- run and preserve the final five-case RCAEval evaluation results once the permitted telemetry is available in the execution environment
+- preserve the verified final five-case RCAEval evaluation result (2/5 exact root-service matches; 1 abstention) and report it as a small case-specific benchmark result
 - keep production telemetry marked unverified unless a real source is connected and tested
 - preserve the five-condition participant results as a bounded historical study result rather than relabeling them as six-condition evidence
 
@@ -147,7 +147,7 @@ Completed for the current integrated runtime:
 7. actual NLI inference verified
 
 Still pending:
-- final five-case conflicted RCAEval scoring evaluation
+- broader RCAEval benchmark evaluation beyond the verified five-case run
 - production telemetry connection
 - any broader benchmark claim beyond the verified executions above
 - a final six-condition human study; the existing 30-participant dataset is five-condition historical evidence
