@@ -5,7 +5,7 @@ The six conditions are experimental presentation conditions, not labels inferred
 - clear: full available evidence.
 - ambiguous: retain evidence compatible with at least two plausible hypotheses.
 - conflicting: preserve competing signals across distinct modalities.
-- incomplete: hide one otherwise available telemetry modality.
+- incomplete: preserve all available telemetry while using a real case whose required modality is genuinely absent; never manufacture missingness by deleting evidence.
 - misleading: add a high-salience distractor signal unrelated to the evaluator root cause.
 - novel: remove or replace a high-similarity historical reference.
 

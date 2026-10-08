@@ -42,3 +42,32 @@ This distinction is critical: dataset RCA labels are not human decision-process 
 ## Reproducibility
 
 Record the exact RCAEval version/commit, selected case IDs, preprocessing version, and benchmark construction rules in configs/ and experiments/.
+
+
+## Gray-area telemetry acquisition
+
+The current research harness requires raw telemetry for these exact candidate cases:
+
+- `re2ob_checkoutservice_cpu_2`
+- `re2ob_checkoutservice_mem_2`
+- `re2ss_user_loss_1`
+
+Raw telemetry is intentionally not committed to GitHub. From the repository root, install the dataset dependency and run:
+
+```bash
+pip install huggingface_hub
+python experiments/acquire_rcaeval_cases.py --data-root data/rcaeval
+```
+
+The acquisition utility downloads only the three required case folders from the official `phamquiluan/RCAEval` dataset and fails if the expected metric/injection files are absent.
+
+Then run the researcher-only validation:
+
+```bash
+python experiments/validate_gray_area_telemetry.py \
+  --data-root data/rcaeval \
+  --metadata RCAEval_ALL_735.json \
+  --out experiments/telemetry_validation.json
+```
+
+**Important:** RCAEval metadata can establish case identity and modality availability, but it does not substitute for raw telemetry validation. Only candidates explicitly marked `VALIDATED` by the telemetry validator may enter the researcher pool.
