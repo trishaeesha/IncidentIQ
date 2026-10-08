@@ -16,7 +16,7 @@ def run(*args: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--nlp", action="store_true", help="also install optional NLP/NLI dependencies")
+    parser.add_argument("--nlp", action="store_true")
     args = parser.parse_args()
 
     if not VENV.exists():
@@ -38,11 +38,8 @@ def main() -> None:
     print()
     print("IncidentIQ environment is ready.")
     print(f"Python: {python}")
-    if args.nlp:
-        print("NLP/NLI dependencies: installed")
-    else:
-        print("NLP/NLI dependencies: optional; use --nlp when needed")
-    print("Next: run the IncidentIQ: Test task, then the IncidentIQ: Run task or press F5.")
+    print("NLP/NLI dependencies: " + ("installed" if args.nlp else "optional"))
+    print("Next: run the IncidentIQ: Test task, then IncidentIQ: Run or press F5.")
 
 if __name__ == "__main__":
     main()
