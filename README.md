@@ -74,3 +74,29 @@ The agreed research setup is fixed. Implementation work should not silently chan
 7. Test on multiple cases.
 8. Construct and validate the six incident conditions.
 9. Run human-only, generic-AI, and IncidentIQ evaluations.
+
+## Integrated execution status
+
+The current integration branch contains the core IncidentIQ runtime plus the research-side ML/NLP/RCAEval tooling. The repository is intended to be cloned once and then executed from VS Code.
+
+### What is runnable
+
+- Core API: app.py
+- Browser prototype: static/index.html
+- Core regression suite: pytest
+- Optional NLI unit tests: tests/test_nli_evidence.py
+- Optional NLI experiment: experiments/run_nli_case.py
+- VS Code setup/run/test tasks
+- GitHub Actions CI and research workflows
+
+### What still requires runtime verification
+
+- local API execution after cloning
+- browser interaction
+- optional NLI model loading/inference
+- any real RCAEval execution requiring external telemetry
+- production telemetry integration
+
+The system does not perform autonomous remediation. Diagnostic recommendations remain human-controlled.
+
+See RUN_IN_VSCODE.md and RESEARCH_STATUS.md for the execution and evidence boundary.

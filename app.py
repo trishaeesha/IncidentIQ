@@ -8,7 +8,20 @@ try:
     from src.nlp.nli_evidence import NLIEvidenceInterpreter
 except Exception:
     NLIEvidenceInterpreter = None
+
 INDEX = Path(__file__).resolve().parent / "static" / "index.html"
+FORBIDDEN = {"root_cause_service", "fault", "fault_description", "ground_truth", "ground_truth_label", "answer_key"}
+
+def assert_safe(value):
+    if isinstance(value, dict):
+        leaked = FORBIDDEN.intersection({str(k).lower() for k in value})
+        if leaked:
+            raise ValueError("ground-truth fields are not accepted")
+        for item in value.values():
+            assert_safe(item)
+    elif isinstance(value, list):
+        for item in value:
+            assert_safe(item)
 
 class Handler(BaseHTTPRequestHandler):
     def _send(self,status,payload,content_type="application/json"):
@@ -23,8 +36,9 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404,{"error":"not_found"})
     def do_POST(self):
         try:
-            n=int(self.headers.get("Content-Length","0")); payload=json.loads(self.rfile.read(n))
-        except Exception as e: return self._send(400,{"error":f"invalid_json: {e}"})
+            n=int(self.headers.get("Content-Length","0")); payload=json.loads(self.rfile.read(n)); assert_safe(payload)
+        except Exception as e:
+            return self._send(400,{"error":f"invalid_request: {e}"})
         if self.path=="/analyze":
             try:
                 evidence=payload.get("evidence",[])
