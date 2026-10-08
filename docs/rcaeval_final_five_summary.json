@@ -1,0 +1,25 @@
+{
+  "evaluation": "IncidentIQ final five-case RCAEval root-service evaluation",
+  "workflow_run_id": 37799770349,
+  "commit": "241828dbf88283b9eaffdb17b1e6211a1aec27f4",
+  "cases": [
+    {"case_id":"re2ob_currencyservice_disk_3","predicted_root_service":null,"root_service_correct":false,"abstained":true},
+    {"case_id":"re2ob_emailservice_disk_2","predicted_root_service":"frontend","root_service_correct":false,"abstained":false},
+    {"case_id":"re2ob_emailservice_mem_2","predicted_root_service":"frontend","root_service_correct":false,"abstained":false},
+    {"case_id":"re2ob_emailservice_socket_3","predicted_root_service":"emailservice","root_service_correct":true,"abstained":false},
+    {"case_id":"re2ob_recommendationservice_mem_3","predicted_root_service":"recommendationservice","root_service_correct":true,"abstained":false}
+  ],
+  "aggregate": {
+    "cases": 5,
+    "correct": 2,
+    "incorrect": 2,
+    "abstained": 1,
+    "overall_root_service_accuracy": 0.4,
+    "non_abstained_root_service_accuracy": 0.5
+  },
+  "integrity": {
+    "ground_truth_passed_to_pipeline": false,
+    "labels_loaded_only_in_evaluator": true,
+    "raw_telemetry_committed": false
+  }
+}
