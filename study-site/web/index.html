@@ -45,14 +45,6 @@ function esc(x){
  x=x===null||x===undefined?"":String(x);
  return x.replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];});
 }
-var CASES=[
-{id:"CASE-01",title:"Checkout performance incident",incident:"Checkout requests are failing or becoming slow during the incident window.",evidence:["checkoutservice CPU rises sharply after the injection.","checkoutservice latency-90 also increases.","The strongest abnormality is localized to checkoutservice CPU."],options:["Checkoutservice CPU/resource saturation","Emailservice latency issue"]},
-{id:"CASE-02",title:"Checkout performance incident",incident:"Checkout performance degrades; review the available evidence before deciding.",evidence:["checkoutservice memory changes after injection.","Error-like log activity is also present.","Review the memory and log evidence before deciding."],options:["Checkoutservice memory/resource pressure","Frontend error increase"]},
-{id:"CASE-03",title:"Checkout network incident",incident:"Checkout latency and log-rate evidence both change during the incident.",evidence:["checkoutservice latency-90 increases after injection.","checkoutservice log-rate evidence changes as well.","Compare the available evidence before deciding."],options:["Checkoutservice network packet loss","Emailservice latency issue"]},
-{id:"CASE-04",title:"Emailservice performance incident",incident:"A visible latency change appears in emailservice; additional evidence is available for comparison.",evidence:["emailservice latency-90 changes after injection.","The emailservice signal should be compared with the other available evidence.","The visible signal may be misleading; use the available evidence and consider verification."],options:["Emailservice latency is the root cause","Checkoutservice network packet loss"]},
-{id:"CASE-05",title:"User-service incident",incident:"The user service is affected; one telemetry source is unavailable.",evidence:["user-service incident evidence indicates network loss.","Metrics and logs are available.","Trace telemetry is unavailable, so the evidence is incomplete."],options:["User-service network packet loss","User-service memory stress"]}
-];
-
 function page(x){A.innerHTML='<section class="card">'+x+"</section>";checkReady();}
 
 function call(action,b,timeoutMs){
@@ -75,13 +67,6 @@ function call(action,b,timeoutMs){
  })
  .catch(function(e){if(e.name==="AbortError")throw new Error("The study server took too long to respond. Please try again.");throw e;})
  .then(function(j){clearTimeout(tm);return j;},function(e){clearTimeout(tm);throw e;});
-}
-
-function localTrial(c,i,arm){
- var x={trialIndex:i+1,caseId:c.id,title:c.title,incident:c.incident,evidence:c.evidence,options:c.options};
- if(arm==="generic_ai")x.assistance={text:"The strongest salient observation is highlighted. Treat it as one input, not guaranteed truth.",highlight:c.evidence[0]};
- if(arm==="incidentiq")x.assistance={text:"Evidence-grounded assistance: compare supporting and contradictory evidence before deciding.",supporting:c.evidence.slice(0,2),uncertainty:c.condition==="clear"?"low":"elevated"};
- return x;
 }
 
 function home(){
