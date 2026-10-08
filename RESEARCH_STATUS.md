@@ -122,7 +122,19 @@ Never claim:
 
 ## Current remaining work
 
-The research harness validation has been executed on the research-validation branch: the five currently defined gray-area telemetry cells were validated, participant-safe assignments passed leakage/cohort checks, the prototype smoke test passed, and the research-report regression test passed. These are harness/telemetry-validation results, not human participant outcomes.\n\nThe remaining scientific work is intentionally limited to:\n- collect real participant responses for the three-mode human study; no participant responses are fabricated\n- run and preserve the final five-case RCAEval evaluation results once the permitted telemetry is available in the execution environment\n- decide whether a defensible sixth novel/historical-mismatch condition can be supported; if no defensible corpus exists, do not invent one\n- connect production telemetry only if a real telemetry source is available and in scope\n\nThe automated AI research reviewer is non-blocking. If its external service/quota is unavailable, the workflow records \"Execution not verified.\" The authoritative code gate remains the regular CI workflow.\n
+The research-validation workflow successfully validated five gray-area telemetry cells: clear, ambiguous, conflicting, incomplete, and misleading. Participant-safe planned assignments passed leakage/cohort checks, the prototype smoke test passed, and the research-report regression test passed. These are harness/telemetry-validation results, not human participant outcomes.
+
+The sixth novel/historical-mismatch condition is explicitly excluded from the participant study because no independent historical-similarity/reference corpus was validated. Adding it would manufacture novelty rather than test it.
+
+The uploaded 30-participant export is a real, audited five-case study dataset: 27 participants are complete and 3 are incomplete. It is therefore valid evidence for that historical five-condition study, but it does not satisfy the frozen six-condition final design and must be reported with that limitation.
+
+The remaining scientific work is intentionally limited to:
+- run and preserve the final five-case RCAEval evaluation results once the permitted telemetry is available in the execution environment
+- keep production telemetry marked unverified unless a real source is connected and tested
+- preserve the five-condition participant results as a bounded historical study result rather than relabeling them as six-condition evidence
+
+The automated AI research reviewer is non-blocking. Its latest successful workflow run used the fallback \"Execution not verified.\" The authoritative code gate is the regular CI workflow.
+
 ## Final verification path
 
 Completed for the current integrated runtime:
@@ -135,8 +147,9 @@ Completed for the current integrated runtime:
 7. actual NLI inference verified
 
 Still pending:
-- permitted real RCAEval telemetry and the five-case conflicted evaluation
+- final five-case conflicted RCAEval scoring evaluation
 - production telemetry connection
 - any broader benchmark claim beyond the verified executions above
+- a final six-condition human study; the existing 30-participant dataset is five-condition historical evidence
 
 No new model, dataset, Docker image, VM, or other large download is required for the completed verification above.
