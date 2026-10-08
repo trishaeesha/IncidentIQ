@@ -23,13 +23,13 @@ This matrix reflects the repository and GitHub Actions evidence actually verifie
 | Participant leakage | VERIFIED AFTER FIX | Public participant page no longer ships the stale hardcoded case-condition block or explicit root-cause wording; a regression test now guards this. |
 | FNRD research harness | VERIFIED | Research-validation workflow passed compilation, report regression, prototype smoke test, telemetry validation, pool construction, and cohort validation. |
 | RCAEval loader | VERIFIED | Local loader and evaluator-separated runner are implemented and tested. |
-| RCAEval five-case evaluation | PENDING | The five intended conflicted cases are not yet preserved as a final evaluator-scored result set. Do not claim completion. |
+| RCAEval five-case evaluation | VERIFIED | GitHub Actions run 37799770349 executed five real RE2-OB cases and evaluator scoring completed successfully: 2/5 exact root-service matches (40% overall), 2 incorrect selections, and 1 abstention. Non-abstained exact-match accuracy was 2/4 (50%). |
 | Sixth novel/historical-mismatch condition | BLOCKED / EXCLUDED | No independent historical-similarity/reference corpus was validated; the experiment freeze explicitly excludes this condition rather than manufacturing it. |
 | Real production telemetry | BLOCKED | No production telemetry source is connected or independently verified. Simulated/live-demo evidence remains clearly bounded. |
 | Current participant study | PARTIALLY VERIFIED | A real 30-participant five-case historical study exists and is audited. It is not the final six-condition study defined by the research contract. |
 | CI | VERIFIED | Latest IncidentIQ CI run on integration/incidentiq-complete succeeded after the participant-page fix sequence; new commits trigger the same gate. |
 | Documentation | PARTIALLY VERIFIED | Core research status and position documents were aligned with verified evidence; final paper/submission narrative still needs the bounded five-condition participant-study limitation carried through. |
-| Final report | PENDING | Should be finalized only after the RCAEval evaluator result is either legitimately produced or explicitly documented as unavailable. |
+| Final report | PARTIALLY READY | The final five-case RCAEval score is now verified and recorded; the submission narrative still needs to incorporate the bounded 40% exact root-service result and its limitations. |
 | Submission package | READY WITH EXPLICIT LIMITATIONS | Source/tests/docs are present, but final submission must disclose pending RCAEval scoring, no production telemetry, and the legacy five-condition participant study boundary. |
 
 ## Non-negotiable final claims
@@ -46,7 +46,7 @@ Not established:
 - IncidentIQ improves human accuracy causally.
 - NLI determines root cause reliably.
 - The novel/historical-mismatch condition is validated.
-- The final five-case RCAEval scoring evaluation is complete.
+- The final five-case RCAEval root-service scoring evaluation is complete: 2/5 exact matches (40% overall; 2/4 among non-abstained cases).
 - Production real-time telemetry is validated.
 - Autonomous remediation is supported.
 
