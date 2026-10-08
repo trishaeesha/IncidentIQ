@@ -3,7 +3,7 @@ name: IncidentIQ Step 1 Real RCAEval Cases
 on:
   push:
     branches:
-      - "research/final-integration"
+      - "integration/incidentiq-complete"
   workflow_dispatch:
 
 jobs:
@@ -14,17 +14,11 @@ jobs:
       fail-fast: false
       matrix:
         case:
-          - re2ob_checkoutservice_cpu_2
-          - re2ob_checkoutservice_mem_2
-          - re2ss_user_loss_1
-          - re2ss_catalogue_loss_1
-          - re2ob_emailservice_socket_1
-          - re2ss_orders_mem_1
-          - re2ss_payment_cpu_1
-          - re2ss_user_delay_1
-          - re2tt_ts-route-service_loss_1
-          - re2tt_ts-route-service_socket_1
-          - re2tt_ts-order-service_mem_1
+          - currencyservice_disk_3
+          - emailservice_disk_2
+          - emailservice_mem_2
+          - emailservice_socket_3
+          - recommendationservice_mem_3
     steps:
       - name: Checkout
         uses: actions/checkout@v4
