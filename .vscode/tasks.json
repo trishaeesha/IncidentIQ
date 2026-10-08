@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "IncidentIQ: Setup",
+      "type": "shell",
+      "command": "python",
+      "args": ["tools/bootstrap.py"],
+      "problemMatcher": []
+    },
+    {
+      "label": "IncidentIQ: Run",
+      "type": "shell",
+      "command": "python",
+      "args": ["app.py"],
+      "dependsOn": "IncidentIQ: Setup",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "IncidentIQ: Test",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "pytest", "-q"],
+      "dependsOn": "IncidentIQ: Setup",
+      "problemMatcher": []
+    }
+  ]
+}
