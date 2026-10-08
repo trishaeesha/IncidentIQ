@@ -23,7 +23,7 @@ Under what software-incident conditions does evidence-grounded AI assistance imp
 - conflicting
 - incomplete
 - misleading
-- novel/historical mismatch
+- novel/historical mismatch (design condition, currently excluded from participant study)
 
 Conditions are not inferred from RCAEval metadata alone. Each condition requires evidence-traceable researcher validation.
 
@@ -42,3 +42,7 @@ Conditions are not inferred from RCAEval metadata alone. Each condition requires
 ## Integrity rule
 
 RCAEval ground truth is evaluator-only. Participant-facing telemetry and AI outputs must never expose root-cause labels, fault labels, condition labels, or condition rationales.
+
+## Current evidence boundary
+
+Five gray-area conditions have passed raw-telemetry validation. The novel/historical-mismatch condition is not validated because no independent historical-similarity/reference corpus exists. The existing 30-participant export is a completed five-condition study and is not evidence for the excluded sixth condition.
