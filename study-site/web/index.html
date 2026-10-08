@@ -188,7 +188,7 @@ function next(){
   s.i++;s.trialStartedAt=Date.now();draw();submitting=false;
  };
  if(TEST){
-  call("saveTest",{testId:s.testId,trialIndex:t.trialIndex,caseId:t.caseId,condition:t.condition,diagnosis:answer.diagnosis,confidence:answer.confidence,workload:answer.workload,aiFollowed:answer.aiFollowed,aiOverridden:answer.aiOverridden,elapsedSeconds:Math.max(0,Math.round((Date.now()-s.trialStartedAt)/1000))})
+  call("saveTest",{testId:s.testId,trialIndex:t.trialIndex,caseId:t.caseId,diagnosis:answer.diagnosis,confidence:answer.confidence,workload:answer.workload,aiFollowed:answer.aiFollowed,aiOverridden:answer.aiOverridden,elapsedSeconds:Math.max(0,Math.round((Date.now()-s.trialStartedAt)/1000))})
    .then(done).catch(function(e){if(b){b.disabled=false;b.textContent=s.i===4?"Finish test":"Save & Next";}alert(e.message);submitting=false;});
   return;
  }
