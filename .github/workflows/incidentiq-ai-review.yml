@@ -26,7 +26,7 @@ jobs:
     permissions:
       contents: read
     outputs:
-      final_message: ${{ steps.codex.outputs.final-message }}
+      final_message: ${{ steps.finalize.outputs.final-message }}
 
     steps:
       - name: Checkout repository
@@ -37,6 +37,7 @@ jobs:
 
       - name: Run Codex reviewer
         id: codex
+        continue-on-error: true
         uses: openai/codex-action@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
@@ -74,11 +75,39 @@ jobs:
             
             Be ruthless, factual, concise, and technically specific.
           output-file: incidentiq-ai-review.md
+      
+      - name: Finalize reviewer result
+        id: finalize
+        if: always()
+        env:
+          REVIEWER_OUTCOME: ${{ steps.codex.outcome }}
+          REVIEW: ${{ steps.codex.outputs.final-message }}
+        run: |
+          if [ "$REVIEWER_OUTCOME" = "success" ] && [ -n "$REVIEW" ]; then
+            {
+              echo 'final-message<<INCIDENTIQ_REVIEW'
+              printf '%s\n' "$REVIEW"
+              echo 'INCIDENTIQ_REVIEW'
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo 'final-message<<INCIDENTIQ_REVIEW'
+              echo '# IncidentIQ AI Research Review'
+              echo
+              echo 'Automated reviewer unavailable.'
+              echo
+              echo '**Execution not verified.**'
+              echo
+              echo 'The separate IncidentIQ CI workflow remains the authoritative code/test gate.'
+              echo 'INCIDENTIQ_REVIEW'
+            } >> "$GITHUB_OUTPUT"
+          fi
+
 
   publish-review:
     name: Publish IncidentIQ review
     needs: codex-review
-    if: always() && needs.codex-review.result == 'success' && needs.codex-review.outputs.final_message != ''
+    if: always() && needs.codex-review.outputs.final_message != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
