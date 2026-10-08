@@ -4,7 +4,7 @@ Updated: 2026-10-08
 
 ## Current repository state
 
-The repository now contains the integrated IncidentIQ core, the experimental NLP/NLI component, the ML/research analysis code, the RCAEval evaluation scaffolding, the browser prototype, and VS Code/GitHub automation.
+The repository contains the integrated IncidentIQ core, experimental NLP/NLI component, ML/research analysis code, RCAEval evaluation scaffolding, browser prototype, and VS Code/GitHub automation.
 
 This file separates implemented, runtime-verified, and not-yet-verified work. No benchmark or human-study result is promoted to verified merely because its code exists.
 
@@ -20,10 +20,13 @@ Implemented:
 - API and browser prototype
 - simulated incremental Live Evidence interaction
 
-Runtime truth:
-- local runtime verification is still required after cloning this integrated branch
-- production telemetry is not connected
-- simulated live evidence is not real telemetry
+Runtime verified:
+- integrated API launched successfully from the GitHub working copy
+- /health returned status=ok with nlp_available=true
+- /analyze executed the evidence -> hypothesis -> decision path
+- browser prototype displayed the decision-support output
+- human-control boundary remained explicit
+- simulated live evidence remains simulated; production telemetry is not connected
 - no autonomous remediation is performed
 
 ## NLP / NLI
@@ -35,10 +38,16 @@ Implemented:
 - isolated NLI experiment runner
 - NLI unit tests
 - GitHub workflow for the optional NLI experiment
+- UI display of the experimental relation and score
 
-Verification rule:
-- the NLI model is PENDING RUNTIME VERIFICATION until the model loads and an actual inference completes in the user's environment or CI
-- NLI relations are an experimental evidence-relation layer, not a root-cause decision mechanism
+Runtime verified on the user's existing local environment:
+- /health reported nlp_available=true
+- actual NLI inference completed successfully
+- "checkoutservice CPU utilization remained normal" vs CPU saturation returned contradiction (score approximately 0.8241)
+- unrelated request activity vs CPU saturation returned neutral (score approximately 0.7611)
+- "checkoutservice CPU utilization increased significantly" vs resource saturation returned neutral (score approximately 0.4216), so this example is recorded as observed rather than relabeled as entailment
+
+NLI relations are an experimental evidence-relation layer, not a root-cause decision mechanism.
 
 ## ML / research analysis
 
@@ -111,13 +120,18 @@ Never claim:
 
 ## Final verification path
 
-After cloning this branch:
-1. run the VS Code setup task
-2. run the regression tests
-3. start the API
-4. verify /health
-5. open the browser prototype
-6. optionally install NLI dependencies and run the NLI unit test
-7. if permitted RCAEval telemetry is available, run the real-case evaluation workflow
+Completed for the current integrated runtime:
+1. regression CI passes on the integrated branch
+2. API starts successfully
+3. /health verified
+4. /analyze verified
+5. browser prototype verified
+6. NLI model availability verified
+7. actual NLI inference verified
 
-The repository is designed so these are execution/verification steps, not project reconstruction steps.
+Still pending:
+- permitted real RCAEval telemetry and the five-case conflicted evaluation
+- production telemetry connection
+- any broader benchmark claim beyond the verified executions above
+
+No new model, dataset, Docker image, VM, or other large download is required for the completed verification above.
