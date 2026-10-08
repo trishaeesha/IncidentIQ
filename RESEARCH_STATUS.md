@@ -118,6 +118,7 @@ Never claim:
 - deployable real-time RCA from exploratory ML
 - autonomous remediation
 
+\n## Current remaining work\n\nThe research harness validation has been executed on the research-validation branch: the five currently defined gray-area telemetry cells were validated, participant-safe assignments passed leakage/cohort checks, the prototype smoke test passed, and the research-report regression test passed. These are harness/telemetry-validation results, not human participant outcomes.\n\nThe remaining scientific work is intentionally limited to:\n- collect real participant responses for the three-mode human study; no participant responses are fabricated\n- run and preserve the final five-case RCAEval evaluation results once the permitted telemetry is available in the execution environment\n- decide whether a defensible sixth novel/historical-mismatch condition can be supported; if no defensible corpus exists, do not invent one\n- connect production telemetry only if a real telemetry source is available and in scope\n\nThe automated AI research reviewer is non-blocking. If its external service/quota is unavailable, the workflow records \"Execution not verified.\" The authoritative code gate remains the regular CI workflow.\n
 ## Final verification path
 
 Completed for the current integrated runtime:
