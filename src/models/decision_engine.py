@@ -21,6 +21,7 @@ class DecisionEngine:
                 "selected_hypothesis": None,
                 "recommended_action": None,
                 "human_control_required": True,
+                "selected_primary_service": None,
                 "rationale": inference.get("notes", ["No candidate hypotheses were generated."]),
             }
 
@@ -52,6 +53,7 @@ class DecisionEngine:
                 "case_id": inference.get("case_id"),
                 "decision": "Unable to justify selecting one explanation from current evidence.",
                 "selected_hypothesis": None,
+                "selected_primary_service": None,
                 "competing_hypotheses": [h.get("hypothesis") for h in ordered],
                 "recommended_action": action,
                 "human_control_required": True,
@@ -66,6 +68,7 @@ class DecisionEngine:
             "case_id": inference.get("case_id"),
             "decision": "Candidate hypothesis with comparatively stronger current support.",
             "selected_hypothesis": top.get("hypothesis"),
+            "selected_primary_service": top.get("primary_service"),
             "competing_hypotheses": [h.get("hypothesis") for h in ordered[1:]],
             "recommended_action": top.get("next_diagnostic_action"),
             "human_control_required": True,
