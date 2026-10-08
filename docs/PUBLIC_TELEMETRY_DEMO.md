@@ -2,7 +2,7 @@
 
 ## Use real public RCAEval telemetry without exposing evaluator labels
 
-RCAEval provides public multi-source microservice failure cases with metrics, logs and, for applicable systems, traces. The IncidentIQ demo can fetch one case locally and pass only telemetry through the IncidentIQ pipeline. urlRCAEval on Hugging Facehttps://huggingface.co/datasets/phamquiluan/RCAEval
+RCAEval provides public multi-source microservice failure cases with metrics, logs and, for applicable systems, traces.
 
 ### 1. Install dependencies
 
@@ -47,4 +47,4 @@ This is **public benchmark telemetry**, not production telemetry.
 
 The demo does not prove production performance. RCAEval ground-truth labels remain evaluator-only and are not passed into the IncidentIQ inference pipeline.
 
-The public RCAEval dataset contains 735 failure cases across RE1, RE2 and RE3; RE2 contains 270 multi-source cases across Online Boutique, Sock Shop and Train Ticket. citeturn0search0
+The public RCAEval dataset contains 735 failure cases across RE1, RE2 and RE3. RE2 contains 270 multi-source cases across Online Boutique, Sock Shop and Train Ticket.
