@@ -1,0 +1,39 @@
+{
+  "study_name": "IncidentIQ six-condition study - deployment template",
+  "status": "NOT_DEPLOYED",
+  "arms": ["human_only", "generic_ai", "incidentiq"],
+  "conditions": [
+    "clear",
+    "ambiguous",
+    "conflicting",
+    "incomplete",
+    "misleading",
+    "novel_historical_mismatch"
+  ],
+  "required_case_properties": {
+    "all_conditions": ["traceable_telemetry", "evaluator_only_ground_truth", "participant_safe_manifest"],
+    "novel_historical_mismatch": [
+      "independent_reference_corpus",
+      "pre_registered_similarity_method",
+      "pre_registered_mismatch_threshold",
+      "temporal_or_source_separation",
+      "researcher_validation"
+    ]
+  },
+  "participant_requirement": {
+    "new_collection_required": true,
+    "existing_30_participant_export_may_not_be_relabelled": true
+  },
+  "outcomes": [
+    "diagnosis_correctness",
+    "decision_time",
+    "diagnostic_action_time",
+    "unnecessary_actions",
+    "incorrect_actions",
+    "verification_time",
+    "ai_followed",
+    "ai_overridden",
+    "confidence",
+    "workload"
+  ]
+}
