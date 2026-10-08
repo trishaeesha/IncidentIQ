@@ -1,20 +1,25 @@
 # IncidentIQ Participant + Coordinator Study Site
 
-30-participant controlled human-AI decision study interface.
+> **Do not distribute this site for the current final study without reconciling it with the current research contract.**
 
-- P01-P10: human-only
-- P11-P20: generic AI assistance
-- P21-P30: IncidentIQ assistance
-- 5 trials per participant
-- Diagnosis: multiple-choice
-- Confidence: selectable 1-5
-- Workload: selectable 1-5
-- AI follow/override recorded where applicable
-- Server-side participant assignment and locking
-- Coordinator: status + individual ZIP + combined ZIP
+This folder contains the earlier 30-participant study interface (P01-P30, three arms, five cases). The current research harness defines the final controlled study as **three modes across six incident conditions** with participant-safe opaque assignments.
 
-GitHub Pages is static hosting and cannot safely be the shared database. backend/Code.gs is a Google Apps Script backend using a Google Sheet for shared state/results.
+The older interface is retained for historical reproducibility and must not be presented as the current six-condition study.
 
-Before distributing the QR: deploy the backend, set web/config.js API_BASE, publish the site, test reserve/resume/save/finalize/coordinator/export, then generate the QR.
+## Research-integrity rule
 
-This repository currently is private. On GitHub Free, Pages for private repositories is not available; make the repository public or use a plan that supports private Pages.
+Before any new participant launch:
+- use the current research-harness participant assignments
+- do not expose condition labels, condition rationales, evaluator ground truth, or source-case identifiers
+- do not fabricate missing participant responses
+- run the participant-safe validation and cohort checks first
+
+The participant page and backend have been hardened so the legacy interface no longer sends condition labels in participant trial payloads, and the misleading case wording no longer states the injected root cause.
+
+The current final study still requires a real participant-data collection run before new human-study results can be claimed.
+
+## Legacy deployment notes
+
+GitHub Pages is static hosting and cannot safely be the shared database. backend/Code.gs uses a Google Apps Script backend with a Google Sheet for shared state/results.
+
+Before using this legacy interface for reproducibility testing: deploy the backend, set web/config.js API_BASE, publish the site, and test reserve/resume/save/finalize/coordinator/export.
