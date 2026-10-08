@@ -82,6 +82,8 @@ The five-case conflicted RCAEval evaluation is NOT VERIFIED unless the required 
 
 ## Human participant study
 
+A direct audit of the uploaded raw participant export (30 JSON files, 140 raw trials) reproduced the dataset structure independently: 27 participants have 5 trials each, while 3 participants are incomplete; the raw condition counts are 30 clear, 28 ambiguous, 27 conflicting, 27 misleading, and 28 incomplete. There is one duplicate participant+trial key in the raw export. Restricting to the 27 complete participants yields exactly 135 analysis trials. The directly recomputed descriptive values are mean decision time 27.3407 s (27.3 s), median 11 s, mean confidence 3.5185 (3.52/5), mean workload 3.5037 (3.50/5), AI followed 85/135 (63.0%), and AI overridden 32/135 (23.7%). The raw participant export is not committed to GitHub. The previously reported 54.8% accuracy remains the project's verified result, but this raw export alone does not contain an authoritative evaluator answer key, so accuracy is not independently re-derived from these JSON files.
+
 Verified analysis dataset from the project handoff:
 - 27 complete participants
 - 135 valid trials
@@ -118,7 +120,9 @@ Never claim:
 - deployable real-time RCA from exploratory ML
 - autonomous remediation
 
-\n## Current remaining work\n\nThe research harness validation has been executed on the research-validation branch: the five currently defined gray-area telemetry cells were validated, participant-safe assignments passed leakage/cohort checks, the prototype smoke test passed, and the research-report regression test passed. These are harness/telemetry-validation results, not human participant outcomes.\n\nThe remaining scientific work is intentionally limited to:\n- collect real participant responses for the three-mode human study; no participant responses are fabricated\n- run and preserve the final five-case RCAEval evaluation results once the permitted telemetry is available in the execution environment\n- decide whether a defensible sixth novel/historical-mismatch condition can be supported; if no defensible corpus exists, do not invent one\n- connect production telemetry only if a real telemetry source is available and in scope\n\nThe automated AI research reviewer is non-blocking. If its external service/quota is unavailable, the workflow records \"Execution not verified.\" The authoritative code gate remains the regular CI workflow.\n
+## Current remaining work
+
+The research harness validation has been executed on the research-validation branch: the five currently defined gray-area telemetry cells were validated, participant-safe assignments passed leakage/cohort checks, the prototype smoke test passed, and the research-report regression test passed. These are harness/telemetry-validation results, not human participant outcomes.\n\nThe remaining scientific work is intentionally limited to:\n- collect real participant responses for the three-mode human study; no participant responses are fabricated\n- run and preserve the final five-case RCAEval evaluation results once the permitted telemetry is available in the execution environment\n- decide whether a defensible sixth novel/historical-mismatch condition can be supported; if no defensible corpus exists, do not invent one\n- connect production telemetry only if a real telemetry source is available and in scope\n\nThe automated AI research reviewer is non-blocking. If its external service/quota is unavailable, the workflow records \"Execution not verified.\" The authoritative code gate remains the regular CI workflow.\n
 ## Final verification path
 
 Completed for the current integrated runtime:
