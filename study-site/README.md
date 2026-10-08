@@ -16,7 +16,7 @@ Before any new participant launch:
 
 The participant page and backend have been hardened so the legacy interface no longer sends condition labels in participant trial payloads, and the misleading case wording no longer states the injected root cause.
 
-The current final study still requires a real participant-data collection run before new human-study results can be claimed.
+The repository also contains a real 30-participant historical export audited outside the public repository: 27 participants are complete and 3 are incomplete. Those results belong to the legacy five-case study and must not be presented as results from the final six-condition research design. No new participant launch should occur from this legacy site unless the current research-harness assignments are used.
 
 ## Legacy deployment notes
 
