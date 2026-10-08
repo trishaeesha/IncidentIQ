@@ -29,8 +29,8 @@ This matrix reflects the repository and GitHub Actions evidence actually verifie
 | Current participant study | PARTIALLY VERIFIED | A real 30-participant five-case historical study exists and is audited. It is not the final six-condition study defined by the research contract. |
 | CI | VERIFIED | Latest IncidentIQ CI run on integration/incidentiq-complete succeeded after the participant-page fix sequence; new commits trigger the same gate. |
 | Documentation | PARTIALLY VERIFIED | Core research status and position documents were aligned with verified evidence; final paper/submission narrative still needs the bounded five-condition participant-study limitation carried through. |
-| Final report | PARTIALLY READY | The final five-case RCAEval score is now verified and recorded; the submission narrative still needs to incorporate the bounded 40% exact root-service result and its limitations. |
-| Submission package | READY WITH EXPLICIT LIMITATIONS | Source/tests/docs are present, but final submission must disclose pending RCAEval scoring, no production telemetry, and the legacy five-condition participant study boundary. |
+| Final report | READY FOR FINAL NARRATIVE | The verified five-case RCAEval result, participant-study boundary, and production-telemetry limitation are now recorded. A final narrative/report can be prepared without adding new scientific claims. |
+| Submission package | READY WITH EXPLICIT LIMITATIONS | Source/tests/docs are present. Submission must disclose the 40% five-case RCAEval result, no production telemetry, and the legacy five-condition participant-study boundary. |
 
 ## Non-negotiable final claims
 
@@ -46,7 +46,6 @@ Not established:
 - IncidentIQ improves human accuracy causally.
 - NLI determines root cause reliably.
 - The novel/historical-mismatch condition is validated.
-- The final five-case RCAEval root-service scoring evaluation is complete: 2/5 exact matches (40% overall; 2/4 among non-abstained cases).
 - Production real-time telemetry is validated.
 - Autonomous remediation is supported.
 
