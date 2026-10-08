@@ -13,9 +13,9 @@ def relate(evidence: dict, hypothesis: str) -> str:
         if re.search(r"\b(cpu|mem|memory|load|resource)\b", text):
             return "supporting"
     if "database or storage pressure" in h:
-        if re.search(r"\b(disk|storage|io|database|db)\b", text):
+        if re.search(r"\b(disk|diskio|storage|io|database|db)\b", text):
             return "supporting"
     if "error or failure increase" in h:
-        if re.search(r"\b(error|failure|exception|warning)\b", text):
+        if re.search(r"(?<![a-z])(error|failure|exception|warning)(?![a-z])", text):
             return "supporting"
     return "neutral"

@@ -1,13 +1,29 @@
-"""IncidentIQ interactive decision-support runtime."""
+﻿"""IncidentIQ interactive decision-support runtime."""
 from __future__ import annotations
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from src.models import DecisionEngine, HypothesisEngine
+FORBIDDEN = {"root_cause_service", "fault", "fault_description", "ground_truth", "answer_key"}
+
+
+def assert_safe(value):
+    if isinstance(value, dict):
+        leaked = FORBIDDEN.intersection({str(k).lower() for k in value})
+        if leaked:
+            raise ValueError("ground-truth fields are not accepted")
+        for item in value.values():
+            assert_safe(item)
+    elif isinstance(value, list):
+        for item in value:
+            assert_safe(item)
+
+
 try:
     from src.nlp.nli_evidence import NLIEvidenceInterpreter
 except Exception:
     NLIEvidenceInterpreter = None
+
 INDEX = Path(__file__).resolve().parent / "static" / "index.html"
 
 class Handler(BaseHTTPRequestHandler):
@@ -23,25 +39,46 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404,{"error":"not_found"})
     def do_POST(self):
         try:
-            n=int(self.headers.get("Content-Length","0")); payload=json.loads(self.rfile.read(n))
-        except Exception as e: return self._send(400,{"error":f"invalid_json: {e}"})
-        if self.path=="/analyze":
-            try:
-                evidence=payload.get("evidence",[])
-                if not isinstance(evidence,list): raise ValueError("evidence must be a list")
-                h=HypothesisEngine().infer(evidence); d=DecisionEngine().decide(h)
-                return self._send(200,{"hypotheses":h,"decision":d})
-            except Exception as e: return self._send(400,{"error":str(e)})
-        if self.path=="/nli":
-            if NLIEvidenceInterpreter is None:
-                return self._send(503,{"error":"NLI unavailable","message":"Install requirements-nlp.txt"})
-            try:
-                r=NLIEvidenceInterpreter().classify(str(payload.get("evidence","")).strip(),str(payload.get("hypothesis","")).strip())
-                return self._send(200,{"evidence":r.evidence,"hypothesis":r.hypothesis,"relation":r.relation,"score":r.score})
-            except Exception as e: return self._send(503,{"error":str(e)})
-        self._send(404,{"error":"not_found"})
-    def log_message(self,format,*args): pass
+            n = int(self.headers.get("Content-Length", "0"))
+            payload = json.loads(self.rfile.read(n))
+            assert_safe(payload)
+
+            if self.path == "/analyze":
+                evidence = payload.get("evidence", [])
+                if not isinstance(evidence, list):
+                    raise ValueError("evidence must be a list")
+                h = HypothesisEngine().infer(evidence)
+                d = DecisionEngine().decide(h)
+                return self._send(200, {"hypotheses": h, "decision": d})
+
+            if self.path == "/nli":
+                if NLIEvidenceInterpreter is None:
+                    return self._send(
+                        503,
+                        {"error": "NLI unavailable", "message": "Install requirements-nlp.txt"},
+                    )
+                r = NLIEvidenceInterpreter().classify(
+                    str(payload.get("evidence", "")).strip(),
+                    str(payload.get("hypothesis", "")).strip(),
+                )
+                return self._send(
+                    200,
+                    {
+                        "evidence": r.evidence,
+                        "hypothesis": r.hypothesis,
+                        "relation": r.relation,
+                        "score": r.score,
+                    },
+                )
+
+            return self._send(404, {"error": "not_found"})
+        except Exception as exc:
+            self._send(400, {"error": str(exc)})
+
+    def log_message(self, format, *args):
+        pass
 
 if __name__=="__main__":
     import os
     ThreadingHTTPServer(("0.0.0.0",int(os.getenv("PORT","8080"))),Handler).serve_forever()
+
