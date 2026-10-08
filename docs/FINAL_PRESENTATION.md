@@ -151,13 +151,14 @@ IncidentIQ is:
 ## Slide 11 — Demo Flow
 
 1. Open the IncidentIQ browser prototype.
-2. Introduce a controlled incident with multiple signals.
-3. Show observations and provenance.
-4. Point out supporting, contradictory, and missing evidence.
-5. Show the competing hypotheses.
-6. Ask which next diagnostic check would distinguish them.
-7. Make the human decision or abstain.
-8. Emphasize: **the system supports the decision; it does not execute remediation.**
+2. Optionally load a real public RCAEval telemetry case using `experiments/fetch_hf_demo_case.py`.
+3. Introduce the incident with multiple signals.
+4. Show observations and provenance.
+5. Point out supporting, contradictory, and missing evidence.
+6. Show the competing hypotheses.
+7. Ask which next diagnostic check would distinguish them.
+8. Make the human decision or abstain.
+9. Emphasize: **the system supports the decision; it does not execute remediation.**
 
 ## Slide 12 — Closing
 
