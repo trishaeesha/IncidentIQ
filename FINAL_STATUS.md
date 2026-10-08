@@ -12,7 +12,7 @@ This matrix reflects the repository and GitHub Actions evidence actually verifie
 | Decision engine | VERIFIED | Human-controlled selection/abstention and discriminating action recommendation are implemented. |
 | Human control | VERIFIED | Runtime explicitly requires human review and performs no autonomous remediation. |
 | Browser runtime | VERIFIED | Existing runtime/browser verification is recorded in RESEARCH_STATUS.md. |
-| API runtime | VERIFIED | /health and /analyze were previously executed successfully; latest CI also passes. |
+| API runtime | VERIFIED | /health and /analyze were previously executed successfully; integrated CI evidence is recorded. |
 | NLI | VERIFIED RUNTIME / EXPERIMENTAL SEMANTICS | Runtime inference was observed locally; three controlled examples are recorded. Broad NLI benchmark quality is not claimed. |
 | Participant audit | VERIFIED | Raw export audit reproduced 30 raw participant files, 140 raw trials, 27 complete participants, 3 incomplete, and 135 valid analysis trials. |
 | Statistics | VERIFIED BOUNDED | Descriptive and previously executed inferential results are recorded; missing statistics are not invented. |
@@ -26,10 +26,10 @@ This matrix reflects the repository and GitHub Actions evidence actually verifie
 | RCAEval five-case evaluation | VERIFIED | GitHub Actions run 37799770349 executed five real RE2-OB cases and evaluator scoring completed successfully: 2/5 exact root-service matches (40% overall), 2 incorrect selections, and 1 abstention. Non-abstained exact-match accuracy was 2/4 (50%). |
 | Sixth novel/historical-mismatch condition | BLOCKED / EXCLUDED | No independent historical-similarity/reference corpus was validated; the experiment freeze explicitly excludes this condition rather than manufacturing it. |
 | Real production telemetry | BLOCKED | No production telemetry source is connected or independently verified. Simulated/live-demo evidence remains clearly bounded. |
-| Current participant study | PARTIALLY VERIFIED | A real 30-participant five-case historical study exists and is audited. It is not the final six-condition study defined by the research contract. |
-| CI | VERIFIED | Latest IncidentIQ CI run on integration/incidentiq-complete succeeded after the participant-page fix sequence; new commits trigger the same gate. |
-| Documentation | PARTIALLY VERIFIED | Core research status and position documents were aligned with verified evidence; final paper/submission narrative still needs the bounded five-condition participant-study limitation carried through. |
-| Final report | READY FOR FINAL NARRATIVE | The verified five-case RCAEval result, participant-study boundary, and production-telemetry limitation are now recorded. A final narrative/report can be prepared without adding new scientific claims. |
+| Current participant study | VERIFIED WITH LIMITATION | A real 30-participant five-case historical study exists and is audited. It is not the final six-condition study defined by the research contract. |
+| CI | VERIFIED FOR INTEGRATED RUNTIME | The integrated branch has successful CI evidence from the verified code sequence. The latest documentation-only commits have not received a new status report from the available GitHub status endpoint. |
+| Documentation | VERIFIED | README, research-status documents, final report, and submission checklist are aligned with the evidence boundary. |
+| Final report | READY | The verified five-case RCAEval result, participant-study boundary, and production-telemetry limitation are recorded. |
 | Submission package | READY WITH EXPLICIT LIMITATIONS | Source/tests/docs are present. Submission must disclose the 40% five-case RCAEval result, no production telemetry, and the legacy five-condition participant-study boundary. |
 
 ## Non-negotiable final claims
@@ -49,6 +49,16 @@ Not established:
 - Production real-time telemetry is validated.
 - Autonomous remediation is supported.
 
-## Open repository hygiene note
+## Future research, not current submission blockers
 
-Several older PRs remain open for historical work. The current integration branch must remain the source of truth; divergent research branches must not be merged wholesale merely to close those PRs.
+1. Validate an independent historical-similarity/reference corpus for the sixth condition.
+2. Run the final six-condition human study.
+3. Expand RCAEval beyond the verified five-case evaluation.
+4. Connect and independently validate production telemetry.
+5. Run a stronger controlled causal human-AI comparison.
+
+These items require new evidence. They must not be closed by fabricating data, benchmark scores, participant outcomes, or production evidence.
+
+## Repository hygiene
+
+The integration/incidentiq-complete branch is the source of truth for the current submission. It intentionally contains the integrated research/runtime work and should not be replaced by wholesale merges from divergent historical branches merely to close old PRs.
