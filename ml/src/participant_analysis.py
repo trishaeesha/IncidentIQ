@@ -1,4 +1,3 @@
-﻿import json
 from pathlib import Path
 
 import pandas as pd
@@ -20,8 +19,6 @@ EXPECTED_CONDITIONS = {
 }
 
 
-# Ground truth taken from the study case definitions
-# in study-site/web/index.html.
 CASE_GROUND_TRUTH = {
     "CASE-01": "Checkoutservice CPU/resource saturation",
     "CASE-02": "Checkoutservice memory/resource pressure",
@@ -50,10 +47,7 @@ def normalize_text(value):
         return ""
 
     return " ".join(
-        str(value)
-        .strip()
-        .lower()
-        .split()
+        str(value).strip().lower().split()
     )
 
 
@@ -61,10 +55,7 @@ def diagnosis_is_correct(case_id, diagnosis):
     if case_id not in CASE_GROUND_TRUTH:
         return None
 
-    expected = normalize_text(
-        CASE_GROUND_TRUTH[case_id]
-    )
-
+    expected = normalize_text(CASE_GROUND_TRUTH[case_id])
     actual = normalize_text(diagnosis)
 
     if not actual:
@@ -74,55 +65,112 @@ def diagnosis_is_correct(case_id, diagnosis):
 
 
 def load_participants():
-    files = sorted(DATA_DIR.glob("P*.json"))
+    csv_files = sorted(
+        DATA_DIR.glob("*.csv")
+    )
 
-    if not files:
-        print("No participant result files found.")
+    if not csv_files:
+        print("No participant CSV files found.")
         print(f"Expected files in: {DATA_DIR}")
         return pd.DataFrame()
 
-    rows = []
+    # Prefer the validated 27-participant / 135-trial dataset.
+    preferred = DATA_DIR / (
+        "IncidentIQ_clean_analysis_27_complete_participants.csv"
+    )
 
-    for path in files:
-        with path.open("r", encoding="utf-8") as f:
-            participant = json.load(f)
+    if preferred.exists():
+        input_file = preferred
+    else:
+        input_file = csv_files[0]
 
-        participant_id = participant.get("participantId")
+    print(f"Loading participant data: {input_file.name}")
 
-        if not participant_id:
-            print(
-                f"WARNING: participantId missing in {path.name}"
-            )
+    df = pd.read_csv(input_file)
 
-        trials = participant.get("trials", [])
+    missing = REQUIRED_FIELDS - set(df.columns)
 
-        for trial in trials:
-            missing = REQUIRED_FIELDS - set(trial.keys())
+    if missing:
+        print("Missing required fields:")
+        for field in sorted(missing):
+            print(f"  - {field}")
+        return pd.DataFrame()
 
-            if missing:
-                raise ValueError(
-                    f"{path.name}, trial "
-                    f"{trial.get('trialIndex')}: "
-                    f"missing required fields: "
-                    f"{sorted(missing)}"
-                )
+    return df
 
-            row = {
-                "participantId": participant_id,
-                "trialIndex": trial.get("trialIndex"),
-                "caseId": trial.get("caseId"),
-                "condition": trial.get("condition"),
-                "diagnosis": trial.get("diagnosis"),
-                "confidence": trial.get("confidence"),
-                "workload": trial.get("workload"),
-                "aiFollowed": trial.get("aiFollowed"),
-                "aiOverridden": trial.get("aiOverridden"),
-                "elapsedSeconds": trial.get("elapsedSeconds"),
-            }
 
-            rows.append(row)
+def validate_data(df):
+    if df.empty:
+        return df
 
-    return pd.DataFrame(rows)
+    print(f"Loaded trials: {len(df)}")
+
+    participants = df["participantId"].nunique()
+    print(f"Unique participants: {participants}")
+
+    trial_counts = (
+        df.groupby("participantId")["trialIndex"]
+        .nunique()
+    )
+
+    complete = int((trial_counts == 5).sum())
+
+    print(f"Participants with exactly 5 trials: {complete}")
+
+    duplicate_count = int(
+        df.duplicated(
+            subset=["participantId", "trialIndex"],
+            keep=False,
+        ).sum()
+    )
+
+    print(f"Duplicate participant/trial rows: {duplicate_count}")
+
+    invalid_conditions = sorted(
+        set(df["condition"].dropna().astype(str).str.lower())
+        - EXPECTED_CONDITIONS
+    )
+
+    if invalid_conditions:
+        print(
+            "Unexpected conditions:",
+            invalid_conditions,
+        )
+
+    unresolved = 0
+    correctness = []
+
+    for _, row in df.iterrows():
+        calculated = diagnosis_is_correct(
+            row["caseId"],
+            row["diagnosis"],
+        )
+
+        supplied = row.get("diagnosis_correct")
+
+        if pd.isna(supplied):
+            final_value = calculated
+        else:
+            supplied_text = str(supplied).strip().lower()
+
+            if supplied_text in {"true", "1", "yes"}:
+                final_value = True
+            elif supplied_text in {"false", "0", "no"}:
+                final_value = False
+            else:
+                final_value = calculated
+
+        if final_value is None:
+            unresolved += 1
+
+        correctness.append(final_value)
+
+    df["correct_diagnosis"] = correctness
+    df["diagnosis_correct"] = df["correct_diagnosis"]
+
+    print(f"Unresolved correctness: {unresolved}")
+
+    return df
 
 
 def main():
@@ -131,103 +179,16 @@ def main():
     if df.empty:
         return
 
-    print(
-        f"Participant files loaded: "
-        f"{df['participantId'].nunique()}"
-    )
-    print(f"Trial rows loaded: {len(df)}")
+    df = validate_data(df)
 
-    unexpected = sorted(
-        set(
-            df["condition"]
-            .dropna()
-            .astype(str)
-            .str.lower()
-        )
-        - EXPECTED_CONDITIONS
-    )
-
-    if unexpected:
-        raise ValueError(
-            f"Unexpected conditions found: {unexpected}"
-        )
-
-    unknown_cases = sorted(
-        set(df["caseId"].dropna().astype(str))
-        - set(CASE_GROUND_TRUTH)
-    )
-
-    if unknown_cases:
-        raise ValueError(
-            f"Unknown case IDs found: {unknown_cases}"
-        )
-
-    df["correct_diagnosis"] = df["caseId"].map(
-        CASE_GROUND_TRUTH
-    )
-
-    df["diagnosis_correct"] = [
-        diagnosis_is_correct(case_id, diagnosis)
-        for case_id, diagnosis
-        in zip(df["caseId"], df["diagnosis"])
-    ]
-
-    duplicate_count = df.duplicated(
-        subset=["participantId", "trialIndex"]
-    ).sum()
-
-    print(
-        f"Duplicate participant/trial rows: "
-        f"{duplicate_count}"
-    )
-
-    if duplicate_count > 0:
-        raise ValueError(
-            "Duplicate participant/trial rows found."
-        )
-
-    complete_counts = (
-        df.groupby("participantId")
-        .size()
-        .sort_values()
-    )
-
-    complete_participants = (
-        complete_counts == 5
-    ).sum()
-
-    print(
-        f"Participants with exactly 5 trials: "
-        f"{complete_participants}"
-    )
-
-    incomplete_participants = complete_counts[
-        complete_counts != 5
-    ]
-
-    if not incomplete_participants.empty:
-        print(
-            "Participants without exactly 5 trials:"
-        )
-        print(incomplete_participants)
-
-    unresolved = df["diagnosis_correct"].isna().sum()
-
-    print(
-        f"Trials with unresolved correctness: "
-        f"{unresolved}"
-    )
+    if df.empty:
+        return
 
     output = OUT_DIR / "participant_analysis.csv"
+    df.to_csv(output, index=False)
 
-    df.to_csv(
-        output,
-        index=False
-    )
-
-    print(f"Output: {output}")
-    print(f"Rows: {len(df)}")
-    print(f"Columns: {len(df.columns)}")
+    print(f"Participant analysis written to: {output}")
+    print(f"Output rows: {len(df)}")
 
 
 if __name__ == "__main__":

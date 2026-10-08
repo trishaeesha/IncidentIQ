@@ -1,20 +1,37 @@
-﻿from pathlib import Path
+"""Exploratory participant-level ML analysis for IncidentIQ.
+
+The target is diagnosis_correct.
+
+Participant identity is used only as the grouping variable for GroupKFold;
+it is never used as a predictive feature.
+
+Two feature sets are evaluated:
+1. Pre-decision: condition, trialIndex
+2. Post-decision: confidence, workload, elapsedSeconds, aiFollowed, aiOverridden
+
+This analysis is exploratory and does not establish causality or production
+predictive performance.
+"""
+from __future__ import annotations
+
+from pathlib import Path
 
 import pandas as pd
 from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
+    confusion_matrix,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score,
-    confusion_matrix,
+    roc_auc_score,
 )
+from sklearn.model_selection import GroupKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import GroupKFold
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -24,93 +41,145 @@ OUTPUT = ROOT / "ml" / "results" / "participant_ml_metrics.csv"
 CM_OUTPUT = ROOT / "ml" / "results" / "participant_confusion_matrix.csv"
 
 
-def main():
+REQUIRED_COLUMNS = [
+    "participantId",
+    "trialIndex",
+    "condition",
+    "diagnosis_correct",
+    "confidence",
+    "workload",
+    "elapsedSeconds",
+    "aiFollowed",
+    "aiOverridden",
+]
+
+
+def make_pipeline(
+    model,
+    categorical_features: list[str],
+    numeric_features: list[str],
+) -> Pipeline:
+    transformers = []
+
+    if categorical_features:
+        categorical_pipeline = Pipeline(
+            [
+                (
+                    "imputer",
+                    SimpleImputer(strategy="most_frequent"),
+                ),
+                (
+                    "onehot",
+                    OneHotEncoder(handle_unknown="ignore"),
+                ),
+            ]
+        )
+
+        transformers.append(
+            (
+                "categorical",
+                categorical_pipeline,
+                categorical_features,
+            )
+        )
+
+    if numeric_features:
+        numeric_pipeline = Pipeline(
+            [
+                (
+                    "imputer",
+                    SimpleImputer(strategy="median"),
+                ),
+            ]
+        )
+
+        transformers.append(
+            (
+                "numeric",
+                numeric_pipeline,
+                numeric_features,
+            )
+        )
+
+    preprocessor = ColumnTransformer(
+        transformers=transformers,
+        remainder="drop",
+    )
+
+    return Pipeline(
+        [
+            ("preprocessor", preprocessor),
+            ("model", model),
+        ]
+    )
+
+
+def main() -> None:
     if not INPUT.exists():
         print("Participant analysis file not found.")
         print(f"Expected: {INPUT}")
-        print("This is normal until real participant results are available.")
         return
 
     df = pd.read_csv(INPUT)
 
-    required = {
-        "participantId",
-        "diagnosis_correct",
-        "condition",
-        "caseId",
-    }
+    missing_columns = [
+        column
+        for column in REQUIRED_COLUMNS
+        if column not in df.columns
+    ]
 
-    missing = required - set(df.columns)
-
-    if missing:
+    if missing_columns:
         raise ValueError(
-            f"Required ML columns are missing: {sorted(missing)}"
+            f"Missing required columns: {missing_columns}"
         )
 
-    df = df.dropna(
-        subset=[
-            "diagnosis_correct",
-            "participantId",
-            "condition",
-            "caseId",
-        ]
-    )
-
-    if df["diagnosis_correct"].nunique() < 2:
-        print("Not enough target classes for classification.")
-        print("Need both correct and incorrect diagnosis trials.")
-        return
+    if df.empty:
+        raise ValueError("Participant analysis dataset is empty.")
 
     y = df["diagnosis_correct"].astype(int)
-
-    # Participant ID is used ONLY for grouped cross-validation.
-    # It is never included in X.
     groups = df["participantId"]
 
-    feature_candidates = [
-        "condition",
-        "caseId",
-    ]
+    unique_groups = groups.nunique()
 
-    features = [
-        column
-        for column in feature_candidates
-        if column in df.columns
-    ]
+    if unique_groups < 2:
+        raise ValueError(
+            "At least two participants are required for GroupKFold."
+        )
 
-    if not features:
-        raise ValueError("No usable ML features found.")
+    n_splits = min(5, unique_groups)
 
-    X = df[features].copy()
-
-    categorical_features = [
-        column
-        for column in ["condition", "caseId"]
-        if column in X.columns
-    ]
-
-    preprocessor = ColumnTransformer(
-        transformers=[
-            (
-                "categorical",
-                Pipeline([
-                    (
-                        "imputer",
-                        SimpleImputer(
-                            strategy="most_frequent"
-                        ),
-                    ),
-                    (
-                        "onehot",
-                        OneHotEncoder(
-                            handle_unknown="ignore"
-                        ),
-                    ),
-                ]),
-                categorical_features,
-            )
-        ]
-    )
+    feature_sets = {
+        "pre_decision": {
+            "features": [
+                "condition",
+                "trialIndex",
+            ],
+            "categorical": [
+                "condition",
+            ],
+            "numeric": [
+                "trialIndex",
+            ],
+        },
+        "post_decision": {
+            "features": [
+                "confidence",
+                "workload",
+                "elapsedSeconds",
+                "aiFollowed",
+                "aiOverridden",
+            ],
+            "categorical": [
+                "aiFollowed",
+                "aiOverridden",
+            ],
+            "numeric": [
+                "confidence",
+                "workload",
+                "elapsedSeconds",
+            ],
+        },
+    }
 
     models = {
         "logistic_regression": LogisticRegression(
@@ -124,106 +193,125 @@ def main():
         ),
     }
 
-    unique_groups = groups.nunique()
-
-    if unique_groups < 2:
-        print("Not enough participants for GroupKFold.")
-        return
-
-    n_splits = min(5, unique_groups)
-
-    cv = GroupKFold(
-        n_splits=n_splits
-    )
-
     results = []
-    confusion_by_model = {}
+    confusion_rows = []
 
-    for model_name, model in models.items():
+    for feature_set_name, config in feature_sets.items():
+        features = config["features"]
 
-        fold_metrics = []
-        confusion_total = None
+        X = df[features].copy()
 
-        for fold, (train_idx, test_idx) in enumerate(
-            cv.split(
-                X,
-                y,
-                groups=groups,
-            ),
-            start=1,
-        ):
+        for column in config["categorical"]:
+            X[column] = X[column].astype(str)
 
-            X_train = X.iloc[train_idx]
-            X_test = X.iloc[test_idx]
+        for model_name, model in models.items():
+            fold_metrics = []
+            confusion_total = None
 
-            y_train = y.iloc[train_idx]
-            y_test = y.iloc[test_idx]
+            cv = GroupKFold(n_splits=n_splits)
 
-            pipeline = Pipeline([
-                (
-                    "preprocessor",
-                    preprocessor,
-                ),
-                (
-                    "model",
+            for fold, (train_idx, test_idx) in enumerate(
+                cv.split(X, y, groups=groups),
+                start=1,
+            ):
+                X_train = X.iloc[train_idx]
+                X_test = X.iloc[test_idx]
+                y_train = y.iloc[train_idx]
+                y_test = y.iloc[test_idx]
+
+                pipeline = make_pipeline(
                     model,
-                ),
-            ])
+                    config["categorical"],
+                    config["numeric"],
+                )
 
-            pipeline.fit(
-                X_train,
-                y_train,
+                pipeline.fit(
+                    X_train,
+                    y_train,
+                )
+
+                predictions = pipeline.predict(X_test)
+                probabilities = pipeline.predict_proba(X_test)[:, 1]
+
+                auc = roc_auc_score(
+                    y_test,
+                    probabilities,
+                )
+
+                metrics = {
+                    "feature_set": feature_set_name,
+                    "model": model_name,
+                    "fold": fold,
+                    "accuracy": accuracy_score(
+                        y_test,
+                        predictions,
+                    ),
+                    "precision": precision_score(
+                        y_test,
+                        predictions,
+                        zero_division=0,
+                    ),
+                    "recall": recall_score(
+                        y_test,
+                        predictions,
+                        zero_division=0,
+                    ),
+                    "f1": f1_score(
+                        y_test,
+                        predictions,
+                        zero_division=0,
+                    ),
+                    "roc_auc": auc,
+                }
+
+                fold_metrics.append(metrics)
+
+                cm = confusion_matrix(
+                    y_test,
+                    predictions,
+                    labels=[0, 1],
+                )
+
+                if confusion_total is None:
+                    confusion_total = cm
+                else:
+                    confusion_total += cm
+
+            results.extend(fold_metrics)
+
+            confusion_rows.extend(
+                [
+                    {
+                        "feature_set": feature_set_name,
+                        "model": model_name,
+                        "actual": "incorrect",
+                        "predicted_incorrect": int(
+                            confusion_total[0, 0]
+                        ),
+                        "predicted_correct": int(
+                            confusion_total[0, 1]
+                        ),
+                    },
+                    {
+                        "feature_set": feature_set_name,
+                        "model": model_name,
+                        "actual": "correct",
+                        "predicted_incorrect": int(
+                            confusion_total[1, 0]
+                        ),
+                        "predicted_correct": int(
+                            confusion_total[1, 1]
+                        ),
+                    },
+                ]
             )
 
-            predictions = pipeline.predict(
-                X_test
-            )
+    metrics_df = pd.DataFrame(results)
+    cm_df = pd.DataFrame(confusion_rows)
 
-            fold_metrics.append({
-                "model": model_name,
-                "fold": fold,
-                "accuracy": accuracy_score(
-                    y_test,
-                    predictions,
-                ),
-                "precision": precision_score(
-                    y_test,
-                    predictions,
-                    zero_division=0,
-                ),
-                "recall": recall_score(
-                    y_test,
-                    predictions,
-                    zero_division=0,
-                ),
-                "f1": f1_score(
-                    y_test,
-                    predictions,
-                    zero_division=0,
-                ),
-            })
-
-            cm = confusion_matrix(
-                y_test,
-                predictions,
-                labels=[0, 1],
-            )
-
-            if confusion_total is None:
-                confusion_total = cm
-            else:
-                confusion_total += cm
-
-        results.extend(
-            fold_metrics
-        )
-
-        confusion_by_model[
-            model_name
-        ] = confusion_total
-
-    metrics_df = pd.DataFrame(
-        results
+    OUTPUT.parent.mkdir(
+        parents=True,
+        exist_ok=True,
     )
 
     metrics_df.to_csv(
@@ -231,32 +319,25 @@ def main():
         index=False,
     )
 
-    confusion_rows = []
-
-    for model_name, cm in confusion_by_model.items():
-
-        confusion_rows.extend([
-            {
-                "model": model_name,
-                "actual": "incorrect",
-                "predicted_incorrect": int(cm[0, 0]),
-                "predicted_correct": int(cm[0, 1]),
-            },
-            {
-                "model": model_name,
-                "actual": "correct",
-                "predicted_incorrect": int(cm[1, 0]),
-                "predicted_correct": int(cm[1, 1]),
-            },
-        ])
-
-    cm_df = pd.DataFrame(
-        confusion_rows
-    )
-
     cm_df.to_csv(
         CM_OUTPUT,
         index=False,
+    )
+
+    summary = (
+        metrics_df.groupby(
+            ["feature_set", "model"],
+            as_index=False,
+        )[
+            [
+                "accuracy",
+                "precision",
+                "recall",
+                "f1",
+                "roc_auc",
+            ]
+        ]
+        .mean()
     )
 
     print(
@@ -274,11 +355,22 @@ def main():
     print(
         f"GroupKFold splits: {n_splits}"
     )
-    print(
-        f"ML features: {features}"
-    )
     print()
-    print(metrics_df)
+
+    print("Pre-decision features:")
+    print(
+        "  ['condition', 'trialIndex']"
+    )
+
+    print("Post-decision features:")
+    print(
+        "  ['confidence', 'workload', 'elapsedSeconds', "
+        "'aiFollowed', 'aiOverridden']"
+    )
+
+    print()
+    print("Mean cross-validation metrics:")
+    print(summary.to_string(index=False))
 
 
 if __name__ == "__main__":

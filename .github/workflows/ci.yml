@@ -1,0 +1,39 @@
+﻿name: IncidentIQ CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  python-validation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install analysis dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pandas numpy scikit-learn matplotlib pytest
+
+      - name: Compile participant analysis scripts
+        run: |
+          python -m py_compile ml/src/participant_analysis.py
+          python -m py_compile ml/src/participant_ml.py
+          python -m py_compile ml/src/condition_analysis.py
+          python -m py_compile ml/src/research_relationships.py
+          python -m py_compile ml/src/participant_visualizations.py
+
+      - name: Run project validation tests
+        run: |
+          pytest -q tests

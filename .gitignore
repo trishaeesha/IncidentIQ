@@ -1,39 +1,58 @@
-# Python
+﻿# Python
 __pycache__/
 *.py[cod]
-*.so
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
 .venv/
 venv/
 env/
-ENV/
 
-# Jupyter
-.ipynb_checkpoints/
+# Local datasets
+RCAEval_ALL_735.json
+RCAEval_DATA/
 
-# Data
-data/raw/
-data/interim/
-data/processed/
-*.parquet
+# Participant / study data
+participant_results/
+experiments/participant_results/
+experiments/real_rcaeval_outputs/
+
+# Local study exports and generated data
 *.csv
-*.jsonl
-*.pkl
-*.pickle
+*.xlsx
+*.xls
+*.json
 
-# Experiment outputs
-outputs/
-artifacts/
-logs/
-mlruns/
-wandb/
+# Preserve tracked source/config JSON if already committed
+!package.json
+!**/package.json
 
-# Secrets
+# Sensitive study configuration
 .env
+.env.*
+*.secret
 *.key
-*.pem
+.clasp.json
 
-# OS / IDE
+# Google Apps Script local secrets/config
+study-site/backend/.clasp.json
+
+# Generated analysis outputs
+ml/results/
+ml/figures/
+
+# OS/editor files
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
