@@ -74,3 +74,23 @@ The agreed research setup is fixed. Implementation work should not silently chan
 7. Test on multiple cases.
 8. Construct and validate the six incident conditions.
 9. Run human-only, generic-AI, and IncidentIQ evaluations.
+
+## Gray-area telemetry acquisition
+
+The current harness targets five exact RCAEval cases:
+
+- `re2ob_checkoutservice_cpu_2`
+- `re2ob_checkoutservice_mem_2`
+- `re2ss_user_loss_1`
+- `re2ob_checkoutservice_loss_1`
+- `re2ob_checkoutservice_loss_2`
+
+Raw telemetry is intentionally not committed to GitHub. Run the existing acquisition utility only when the selected case folders are not already present:
+
+```bash
+python experiments/acquire_rcaeval_cases.py --data-root data/rcaeval
+```
+
+The acquisition utility reuses verified local case folders and fails clearly if required files or the RCAEval metadata index are missing. It does not create duplicate copies.
+
+Only candidates explicitly marked `VALIDATED` by the researcher-only telemetry validator may enter the study pool.
