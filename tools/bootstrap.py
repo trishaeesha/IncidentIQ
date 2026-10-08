@@ -1,0 +1,31 @@
+"""Prepare a local IncidentIQ environment from VS Code."""
+from __future__ import annotations
+import os
+import subprocess
+import venv
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+VENV = ROOT / ".venv"
+REQ = ROOT / "requirements.txt"
+
+def run(*args: str) -> None:
+    subprocess.check_call(list(args), cwd=ROOT)
+
+def main() -> None:
+    if not VENV.exists():
+        print("Creating IncidentIQ virtual environment...")
+        venv.create(VENV, with_pip=True)
+    python = VENV / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    if not python.exists():
+        raise SystemExit("Could not create .venv. Install Python 3.11+ and retry.")
+    print("Installing core dependencies...")
+    run(str(python), "-m", "pip", "install", "--upgrade", "pip")
+    run(str(python), "-m", "pip", "install", "-r", str(REQ))
+    print()
+    print("IncidentIQ environment is ready.")
+    print(f"Python: {python}")
+    print("Next: run the IncidentIQ: Run task or press F5.")
+
+if __name__ == "__main__":
+    main()
