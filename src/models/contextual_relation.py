@@ -23,7 +23,7 @@ def relate(evidence: dict, hypothesis: str) -> str:
             return "supporting"
 
     if "error or failure increase" in h:
-        if re.search(r"\b(error|failure|exception|warning)\b", text):
+        if re.search(r"\b(error|error_like_frequency|failure|exception|warning)\b", text):
             return "supporting"
 
     return "neutral"
