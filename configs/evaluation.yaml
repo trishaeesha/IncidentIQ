@@ -1,0 +1,25 @@
+research_question: "Under what software-incident conditions does evidence-grounded AI assistance improve or degrade human engineers' diagnostic decision-making?"
+dataset:
+  name: RCAEval
+  raw_data_in_git: false
+modes: [human_only, generic_ai, incidentiq]
+conditions: [clear, ambiguous, conflicting, incomplete, misleading, novel]
+metrics:
+  primary: [final_diagnosis_accuracy, time_to_correct_hypothesis, time_to_correct_action, unnecessary_diagnostic_tests, incorrect_diagnostic_tests, verification_time]
+  secondary: [confidence, confidence_correctness_calibration, ai_following_rate, ai_override_rate, incorrect_ai_following, correct_ai_override, correct_ai_following, workload]
+condition_policy:
+  assignment_source: researcher_validated_evidence
+  unvalidated_label: UNVALIDATED
+  participant_sees_condition_label: false
+  metadata_only_assignment: false
+leakage_policy:
+  participant_excludes: [root_cause_service, fault, fault_description, ground_truth, answer_key, condition_rationale]
+  ground_truth_store: evaluator_only
+randomization:
+  incident_order: randomized
+  mode_balance: balanced_when_feasible
+  repeated_case_within_participant: prohibited
+  seed_required: true
+future_ablations:
+  enabled: false
+  note: "Schema permits future variants without adding a fourth core mode."

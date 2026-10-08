@@ -1,0 +1,19 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"IncidentIQ Generic AI Baseline Interaction",
+  "type":"object",
+  "required":["trial_id","model","prompt","input_evidence","output","recommendations","timestamp"],
+  "properties":{
+    "trial_id":{"type":"string","minLength":1},
+    "model":{"type":"string","minLength":1},
+    "model_version":{"type":["string","null"]},
+    "prompt":{"type":"string","minLength":1},
+    "input_evidence":{"type":"array","items":{"type":"object"}},
+    "output":{"type":"string"},
+    "recommendations":{"type":"array","items":{"type":"string"}},
+    "temperature":{"type":["number","null"],"minimum":0},
+    "settings":{"type":"object"},
+    "timestamp":{"type":"string","minLength":1}
+  },
+  "additionalProperties":false
+}
