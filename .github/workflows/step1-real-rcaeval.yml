@@ -14,11 +14,11 @@ jobs:
       fail-fast: false
       matrix:
         case:
-          - currencyservice_disk_3
-          - emailservice_disk_2
-          - emailservice_mem_2
-          - emailservice_socket_3
-          - recommendationservice_mem_3
+          - re2ob_currencyservice_disk_3
+          - re2ob_emailservice_disk_2
+          - re2ob_emailservice_mem_2
+          - re2ob_emailservice_socket_3
+          - re2ob_recommendationservice_mem_3
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -86,7 +86,9 @@ jobs:
         env:
           CASE_ID: ${{ matrix.case }}
         run: |
+          set -o pipefail
           python experiments/run_real_rcaeval_case.py --data-root "$GITHUB_WORKSPACE/rcaeval_ci" --case "$CASE_ID" | tee "step1_${CASE_ID}.json"
+          python -m json.tool "step1_${CASE_ID}.json" >/dev/null
 
       - name: Upload result
         uses: actions/upload-artifact@v4
