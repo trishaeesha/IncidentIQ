@@ -57,9 +57,9 @@ The contribution must be demonstrated experimentally through human-AI diagnostic
 
 ## Status
 
-**Implementation phase started.**
+**Integration and research-validation phase.**
 
-Current milestone: build the end-to-end IncidentIQ pipeline on a verified local subset of RCAEval, then scale the same pipeline to the benchmark.
+The core runtime, research harness, NLI experiment, participant-data audit, and five-condition gray-area telemetry validation are implemented and verified to the extent documented below. The final five-case RCAEval scoring run and production-telemetry connection remain separate pending items.
 
 The agreed research setup is fixed. Implementation work should not silently change the research question, six incident conditions, three comparison modes, or primary evaluation metrics.
 
@@ -72,8 +72,8 @@ The agreed research setup is fixed. Implementation work should not silently chan
 5. Provide diagnostic guidance and uncertainty.
 6. Expose the pipeline through the prototype UI/API.
 7. Test on multiple cases.
-8. Construct and validate the six incident conditions.
-9. Run human-only, generic-AI, and IncidentIQ evaluations.
+8. Construct and validate the fixed gray-area conditions using real telemetry.
+9. Run human-only, generic-AI, and IncidentIQ evaluations only after participant-safe validation.
 
 ## Integrated execution status
 
@@ -89,13 +89,13 @@ The current integration branch contains the core IncidentIQ runtime plus the res
 - VS Code setup/run/test tasks
 - GitHub Actions CI and research workflows
 
-### What still requires runtime verification
+### Current evidence boundary
 
-- local API execution after cloning
-- browser interaction
-- optional NLI model loading/inference
-- any real RCAEval execution requiring external telemetry
-- production telemetry integration
+- Five gray-area telemetry cells are validated by GitHub Actions: clear, ambiguous, conflicting, incomplete, and misleading.
+- The novel/historical-mismatch sixth condition is explicitly excluded because no independent historical-similarity corpus was validated.
+- A 30-participant, five-case study export exists and has been audited, but it is a legacy five-condition study and must not be presented as the final six-condition study.
+- The five-case conflicted RCAEval scoring evaluation is not yet verified.
+- Production telemetry integration is not verified.
 
 The system does not perform autonomous remediation. Diagnostic recommendations remain human-controlled.
 
