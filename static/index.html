@@ -1,9 +1,1411 @@
-﻿<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IncidentIQ</title><style>body{font-family:system-ui;margin:0;background:#f5f7fb;color:#182033}header{background:#111827;color:white;padding:22px}main{max-width:1050px;margin:22px auto;padding:0 16px}.card{background:white;border:1px solid #ddd;border-radius:12px;padding:16px;margin:14px 0}textarea,input{width:100%;box-sizing:border-box;padding:10px;margin:6px 0 12px;border:1px solid #ccd2dc;border-radius:8px}button{padding:10px 15px;border:0;border-radius:8px;background:#2563eb;color:white;margin-right:7px;cursor:pointer}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.item{background:#f8fafc;border-left:4px solid #94a3b8;padding:10px;margin:8px 0}@media(max-width:700px){.grid{grid-template-columns:1fr}}</style></head><body><header><h1>IncidentIQ</h1><div>Evidence-grounded incident investigation • Human control required</div></header><main><div class="card"><h2>Incident Evidence</h2><input id="id" value="demo-incident-001"><textarea id="ev" rows="7">CPU utilization increased
-Error rate increased
-Request latency increased
-Database disk usage remained stable</textarea><button onclick="analyze()">Analyze Incident</button><button onclick="live()">Add Live Evidence</button><span id="s"> Ready</span></div><div class="grid"><div class="card"><h2>Decision</h2><div id="d">â€”</div></div><div class="card"><h2>Next Diagnostic Check</h2><div id="a">â€”</div></div></div><div class="card"><h2>Candidate Hypotheses</h2><div id="h">â€”</div></div><div class="card"><h2>Experimental NLP/NLI</h2><input id="nh" placeholder="Resource saturation"><button onclick="nli()">Run NLI</button><pre id="nr">â€”</pre></div></main><script>
-function rows(){return document.getElementById('ev').value.split('\n').map((x,i)=>x.trim()).filter(Boolean).map((x,i)=>({evidence_id:'ui-'+(i+1),source:'user',observation:x,signal:'observation',direction:'increase',strength:'moderate',evidence_strength:'moderate',availability:'available'}))}
-async function analyze(){s.textContent=' Analyzing...';let r=await fetch('/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({case_id:id.value,evidence:rows()})}),x=await r.json();if(!r.ok){s.textContent=' '+x.error;return}s.textContent=' Complete';d.innerHTML='<b>'+x.decision.decision+'</b><br>Selected: '+(x.decision.selected_hypothesis||'None')+'<br>Human control: '+x.decision.human_control_required;a.textContent=x.decision.recommended_action||'Further verification required';h.innerHTML=(x.hypotheses.hypotheses||[]).map((z,i)=>'<div class="item"><b>'+(i+1)+'. '+z.hypothesis+'</b><br>Confidence: '+z.confidence+' | Uncertainty: '+z.uncertainty+'<br>Supporting: '+z.supporting_evidence.length+' | Contradicting: '+z.contradicting_evidence.length+' | Missing: '+z.missing_evidence.length+'<br>'+z.rationale+'</div>').join('')}
-function live(){ev.value+='\nNew live observation: request latency changed';analyze()}
-async function nli(){let r=await fetch('/nli',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({evidence:rows()[0]?.observation||'',hypothesis:nh.value||'Resource saturation'})});nr.textContent=JSON.stringify(await r.json(),null,2)}
-</script></body></html>
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>IncidentIQ — Incident Command Center</title>
+<style>
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+ margin:0;
+ background:#05070c;
+ color:#e8edf7;
+ font-family:Inter,Segoe UI,Arial,sans-serif;
+ overflow-x:hidden
+}
+button,input,textarea{font:inherit}
+button{cursor:pointer}
+
+:root{
+ --bg:#05070c;
+ --panel:#0b1019;
+ --panel2:#0e1521;
+ --border:#1d2a3b;
+ --text:#e8edf7;
+ --muted:#8491a5;
+ --accent:#6ea8ff;
+ --green:#42d392;
+ --yellow:#f3c969;
+ --red:#ff6878;
+ --purple:#a98bff;
+}
+
+.app{display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{
+ position:fixed;
+ left:0;
+ top:0;
+ bottom:0;
+ width:250px;
+ background:#070b12;
+ border-right:1px solid var(--border);
+ padding:24px 16px;
+ z-index:20
+}
+.brand{
+ display:flex;
+ align-items:center;
+ gap:12px;
+ padding:0 10px 28px
+}
+.logo{
+ width:40px;height:40px;
+ display:grid;place-items:center;
+ border:1px solid #304a70;
+ border-radius:12px;
+ background:#0c1626;
+ color:var(--accent);
+ font-size:20px;
+ font-weight:800;
+ box-shadow:0 0 25px rgba(70,130,255,.12)
+}
+.brand-title{font-size:17px;font-weight:800;letter-spacing:.3px}
+.brand-sub{font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:1.5px}
+
+.nav-label{
+ color:#59677c;
+ font-size:10px;
+ font-weight:800;
+ letter-spacing:1.8px;
+ padding:15px 11px 9px
+}
+.nav{
+ width:100%;
+ border:1px solid transparent;
+ background:transparent;
+ color:#8794a8;
+ display:flex;
+ align-items:center;
+ gap:12px;
+ padding:12px 12px;
+ border-radius:10px;
+ margin:3px 0;
+ text-align:left;
+ transition:.18s;
+ font-size:13px
+}
+.nav:hover{
+ background:#0d1521;
+ color:#dce7f8;
+ border-color:#1c2b3d;
+ transform:translateX(2px)
+}
+.nav.active{
+ background:#101c2c;
+ color:#fff;
+ border-color:#28476c;
+ box-shadow:inset 3px 0 0 var(--accent)
+}
+.ico{
+ width:22px;
+ text-align:center;
+ font-size:16px
+}
+.sidebar-bottom{
+ position:absolute;
+ bottom:20px;
+ left:16px;
+ right:16px;
+ padding:14px;
+ border:1px solid var(--border);
+ border-radius:12px;
+ background:#0a0f17
+}
+.live-dot{
+ display:inline-block;
+ width:7px;height:7px;
+ border-radius:50%;
+ background:var(--green);
+ box-shadow:0 0 10px var(--green);
+ margin-right:7px
+}
+.side-small{font-size:11px;color:var(--muted);margin-top:7px}
+
+/* MAIN */
+.main{
+ margin-left:250px;
+ width:calc(100% - 250px);
+ padding:24px 30px 70px
+}
+.topbar{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ margin-bottom:22px;
+ padding:16px 20px;
+ border:1px solid var(--border);
+ background:rgba(10,15,24,.88);
+ border-radius:15px;
+ position:sticky;
+ top:12px;
+ z-index:10;
+ backdrop-filter:blur(14px)
+}
+.eyebrow{
+ color:#66758c;
+ font-size:10px;
+ font-weight:800;
+ letter-spacing:2px
+}
+.title{
+ font-size:25px;
+ font-weight:800;
+ margin-top:4px
+}
+.status{
+ display:flex;
+ align-items:center;
+ gap:8px;
+ padding:8px 12px;
+ border-radius:20px;
+ border:1px solid #1f3d32;
+ background:#091610;
+ color:#74dfaa;
+ font-size:11px;
+ font-weight:700
+}
+
+.hero{
+ display:grid;
+ grid-template-columns:1.7fr 1fr;
+ gap:18px;
+ margin-bottom:18px
+}
+.hero-main,.hero-side,.card{
+ background:linear-gradient(145deg,#0b111b,#080d15);
+ border:1px solid var(--border);
+ border-radius:16px
+}
+.hero-main{
+ padding:25px;
+ min-height:220px;
+ position:relative;
+ overflow:hidden
+}
+.hero-main:after{
+ content:"";
+ position:absolute;
+ width:300px;height:300px;
+ right:-130px;top:-160px;
+ border-radius:50%;
+ border:1px solid #183150;
+ box-shadow:0 0 80px rgba(64,120,220,.1)
+}
+.hero h1{font-size:30px;margin:8px 0 10px}
+.hero p{color:var(--muted);line-height:1.6;max-width:680px;font-size:13px}
+.hero-side{padding:20px}
+.metric{
+ padding:14px 0;
+ border-bottom:1px solid #172130
+}
+.metric:last-child{border-bottom:0}
+.metric-label{color:#6e7c91;font-size:10px;letter-spacing:1.2px}
+.metric-value{font-size:22px;font-weight:800;margin-top:5px}
+
+.stats{
+ display:grid;
+ grid-template-columns:repeat(5,1fr);
+ gap:12px;
+ margin-bottom:18px
+}
+.stat{
+ background:#0b111a;
+ border:1px solid var(--border);
+ border-radius:13px;
+ padding:15px
+}
+.stat-label{font-size:9px;color:#6f7c90;letter-spacing:1.3px;font-weight:800}
+.stat-value{font-size:23px;font-weight:800;margin-top:7px}
+.stat-note{font-size:10px;color:#627085;margin-top:4px}
+
+/* SECTIONS */
+.section{
+ scroll-margin-top:100px;
+ margin-bottom:18px
+}
+.section-head{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ margin-bottom:10px
+}
+.section-title{
+ font-size:13px;
+ font-weight:800;
+ letter-spacing:.4px
+}
+.section-tag{
+ font-size:9px;
+ color:#6f7d92;
+ border:1px solid var(--border);
+ border-radius:20px;
+ padding:5px 9px
+}
+.card{padding:20px}
+.grid2{
+ display:grid;
+ grid-template-columns:1.35fr 1fr;
+ gap:18px
+}
+.grid3{
+ display:grid;
+ grid-template-columns:repeat(3,1fr);
+ gap:12px
+}
+.card-head{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ margin-bottom:14px
+}
+.card-title{font-size:13px;font-weight:800}
+.card-sub{font-size:10px;color:#647287}
+
+textarea{
+ width:100%;
+ min-height:145px;
+ resize:vertical;
+ background:#060a11;
+ color:#dce6f5;
+ border:1px solid #1d2b3d;
+ border-radius:11px;
+ padding:14px;
+ outline:none;
+ line-height:1.55;
+ font-size:12px
+}
+textarea:focus{border-color:#38679c;box-shadow:0 0 0 3px rgba(70,130,220,.08)}
+
+.actions{
+ display:flex;
+ flex-wrap:wrap;
+ gap:9px;
+ margin-top:12px
+}
+.btn{
+ border:1px solid #25364c;
+ background:#101927;
+ color:#dbe7f7;
+ padding:9px 14px;
+ border-radius:9px;
+ font-size:11px;
+ font-weight:700;
+ transition:.18s
+}
+.btn:hover{background:#162337;border-color:#3a5b83}
+.btn.primary{
+ background:#17345a;
+ border-color:#315d91;
+ color:#eaf3ff
+}
+.btn.primary:hover{background:#204571}
+.btn.green{
+ border-color:#26573f;
+ background:#0d2118;
+ color:#7ce4ae
+}
+.btn.danger{
+ border-color:#5b2b35;
+ background:#1d0e13;
+ color:#ff9aa6
+}
+
+.codebox{
+ background:#05080d;
+ border:1px solid #182332;
+ border-radius:10px;
+ padding:13px;
+ min-height:70px;
+ color:#8fa1b9;
+ font-family:Consolas,monospace;
+ font-size:10px;
+ white-space:pre-wrap;
+ word-break:break-word
+}
+
+/* EVIDENCE */
+.evidence-list{display:grid;gap:9px}
+.evidence-item{
+ display:grid;
+ grid-template-columns:32px 1fr auto;
+ gap:10px;
+ align-items:start;
+ padding:12px;
+ background:#080d15;
+ border:1px solid #172435;
+ border-radius:10px
+}
+.ev-num{
+ width:25px;height:25px;
+ display:grid;place-items:center;
+ border-radius:7px;
+ background:#101d2e;
+ color:#74aaff;
+ font-size:10px;font-weight:800
+}
+.ev-text{font-size:11px;line-height:1.45}
+.ev-meta{font-size:9px;color:#617087;margin-top:4px}
+.badge{
+ font-size:8px;
+ font-weight:800;
+ padding:4px 7px;
+ border-radius:10px;
+ border:1px solid #27425f;
+ color:#83b5f7;
+ background:#0c1725;
+ white-space:nowrap
+}
+
+/* HYPOTHESES */
+.hyp-list{display:grid;gap:10px}
+.hyp{
+ border:1px solid #1b2a3c;
+ background:#080d15;
+ border-radius:12px;
+ padding:14px
+}
+.hyp-top{display:flex;justify-content:space-between;gap:10px}
+.hyp-name{font-weight:800;font-size:12px}
+.conf{
+ font-size:10px;
+ color:#8bbcff;
+ font-weight:800
+}
+.bar{
+ height:5px;
+ background:#131d2a;
+ border-radius:10px;
+ margin:10px 0
+}
+.bar span{
+ display:block;
+ height:100%;
+ border-radius:10px;
+ background:#4d86d8
+}
+.hyp-detail{font-size:10px;color:#69778c;line-height:1.5}
+
+/* DECISION */
+.decision-box{
+ padding:20px;
+ border:1px solid #493d23;
+ background:#141108;
+ border-radius:13px
+}
+.decision-state{
+ display:inline-flex;
+ padding:6px 9px;
+ border-radius:15px;
+ background:#241d0d;
+ border:1px solid #5a4a28;
+ color:#f1cf72;
+ font-size:9px;
+ font-weight:800;
+ letter-spacing:.7px
+}
+.decision-text{font-size:18px;font-weight:800;margin:13px 0 8px}
+.decision-note{font-size:11px;color:#9b9072;line-height:1.55}
+.check{
+ padding:11px;
+ background:#0a0e14;
+ border:1px solid #1a2736;
+ border-radius:9px;
+ margin-top:8px;
+ font-size:10px;
+ color:#9daabd
+}
+
+/* NLI */
+.nli-form{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:12px
+}
+.input{
+ width:100%;
+ background:#060a11;
+ border:1px solid #1d2b3d;
+ color:#dce6f5;
+ border-radius:9px;
+ padding:11px;
+ outline:none;
+ font-size:11px
+}
+.nli-result{
+ margin-top:13px;
+ display:grid;
+ grid-template-columns:1fr 1fr 1fr;
+ gap:10px
+}
+.nli-value{
+ padding:13px;
+ border:1px solid #1b2a3b;
+ background:#080d15;
+ border-radius:10px
+}
+.nli-value b{display:block;font-size:9px;color:#68778d;letter-spacing:1px}
+.nli-value span{display:block;margin-top:7px;font-size:14px;font-weight:800}
+
+/* HISTORY */
+.history{display:grid;gap:9px}
+.history-item{
+ padding:12px;
+ border:1px solid #182638;
+ background:#080d15;
+ border-radius:10px;
+ display:flex;
+ justify-content:space-between;
+ gap:15px
+}
+.history-main{font-size:11px}
+.history-time{font-size:9px;color:#617087}
+.empty{
+ padding:25px;
+ text-align:center;
+ color:#58667a;
+ border:1px dashed #1c2a3b;
+ border-radius:10px;
+ font-size:11px
+}
+
+.footer{
+ margin-top:28px;
+ padding:15px;
+ text-align:center;
+ color:#4e5b6e;
+ font-size:9px;
+ letter-spacing:.5px
+}
+
+/* TOAST */
+.toast{
+ position:fixed;
+ right:24px;
+ bottom:24px;
+ padding:12px 16px;
+ border-radius:10px;
+ background:#111a28;
+ border:1px solid #29415f;
+ color:#dbe8f8;
+ font-size:11px;
+ opacity:0;
+ transform:translateY(12px);
+ pointer-events:none;
+ transition:.25s;
+ z-index:100
+}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* MOBILE */
+@media(max-width:1000px){
+ .sidebar{width:210px}
+ .main{margin-left:210px;width:calc(100% - 210px);padding:18px}
+ .stats{grid-template-columns:repeat(3,1fr)}
+ .hero,.grid2{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+ .sidebar{
+  position:relative;
+  width:100%;
+  height:auto;
+  border-right:0;
+  border-bottom:1px solid var(--border)
+ }
+ .sidebar-bottom{display:none}
+ .app{display:block}
+ .main{margin-left:0;width:100%}
+ .nav{display:inline-flex;width:auto;margin-right:4px}
+ .nav-label{display:none}
+ .brand{padding-bottom:15px}
+ .stats{grid-template-columns:repeat(2,1fr)}
+ .grid3,.nli-form,.nli-result{grid-template-columns:1fr}
+ .topbar{position:relative;top:0}
+}
+</style>
+<style id="incidentiq-upgrade-css">
+.upgrade-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;margin-top:18px}
+.upgrade-panel{background:linear-gradient(145deg,#0b111b,#080d15);border:1px solid #1d2a3b;border-radius:16px;padding:20px}
+.upgrade-title{font-size:12px;font-weight:800;margin-bottom:5px}
+.upgrade-sub{font-size:10px;color:#647287;margin-bottom:15px}
+.timeline{position:relative;padding-left:25px}
+.timeline:before{content:"";position:absolute;left:7px;top:4px;bottom:4px;width:1px;background:#26384e}
+.t-event{position:relative;padding:0 0 15px 12px}
+.t-event:before{content:"";position:absolute;left:-21px;top:4px;width:8px;height:8px;border-radius:50%;background:#6ea8ff;box-shadow:0 0 10px rgba(110,168,255,.4)}
+.t-time{font-size:9px;color:#62748c;letter-spacing:.5px}
+.t-text{font-size:11px;margin-top:3px;color:#d5dfed}
+.quality{display:flex;align-items:center;gap:15px}
+.quality-ring{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#6ea8ff 0deg,#6ea8ff 295deg,#182536 295deg);position:relative}
+.quality-ring:after{content:"";position:absolute;inset:7px;border-radius:50%;background:#0a1019}
+.quality-ring span{position:relative;z-index:2;font-size:15px;font-weight:800}
+.quality-label{font-size:12px;font-weight:800}
+.quality-note{font-size:10px;color:#6c7b90;margin-top:5px;line-height:1.5}
+.signal-list{display:grid;gap:7px;margin-top:15px}
+.signal{display:flex;justify-content:space-between;align-items:center;padding:9px 10px;background:#080d15;border:1px solid #172435;border-radius:8px;font-size:10px}
+.signal b{font-size:9px}
+.signal.ok b{color:#62d99c}.signal.warn b{color:#f0c968}.signal.info b{color:#7eaff4}
+.research-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.research-stat{background:#080d15;border:1px solid #19283a;border-radius:10px;padding:13px}
+.research-stat b{display:block;font-size:8px;color:#65748a;letter-spacing:1px}
+.research-stat strong{display:block;font-size:19px;margin-top:6px}
+.research-stat small{display:block;font-size:9px;color:#59697e;margin-top:3px}
+.explain-box{background:#080d15;border:1px solid #19283a;border-radius:10px;padding:14px;margin-top:10px}
+.explain-head{display:flex;justify-content:space-between;align-items:center}
+.explain-name{font-size:12px;font-weight:800}
+.explain-line{font-size:10px;color:#8593a7;line-height:1.5;margin-top:8px}
+.explain-pill{font-size:8px;padding:4px 7px;border-radius:10px;border:1px solid #31506e;color:#83b7fa}
+.gate-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.gate-btn{border:1px solid #263a52;background:#0d1622;color:#dbe7f7;border-radius:8px;padding:8px 11px;font-size:10px}
+.gate-btn:hover{border-color:#4875a8;background:#132235}
+.placement-note{margin-top:10px;padding:10px;border-left:2px solid #6ea8ff;background:#09111c;color:#78879c;font-size:10px;line-height:1.5}
+@media(max-width:900px){.upgrade-grid{grid-template-columns:1fr}.research-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.research-grid{grid-template-columns:1fr}}
+</style></head>
+
+<body>
+<div class="app">
+
+<aside class="sidebar">
+ <div class="brand">
+  <div class="logo">IQ</div>
+  <div>
+   <div class="brand-title">IncidentIQ</div>
+   <div class="brand-sub">DECISION INTELLIGENCE</div>
+  </div>
+ </div>
+
+ <div class="nav-label">WORKSPACE</div>
+
+ <button class="nav active" data-target="section-command">
+  <span class="ico">◈</span>Command Center
+ </button>
+
+ <button class="nav" data-target="section-evidence">
+  <span class="ico">◉</span>Evidence Intelligence
+ </button>
+
+ <button class="nav" data-target="section-hypotheses">
+  <span class="ico">◇</span>Hypothesis Engine
+ </button>
+
+ <button class="nav" data-target="section-decision">
+  <span class="ico">⚖</span>Decision Gate
+ </button>
+
+ <div class="nav-label">RESEARCH</div>
+
+ <button class="nav" data-target="section-nli">
+  <span class="ico">◎</span>NLI Laboratory
+ </button>
+
+ <button class="nav" data-target="section-history">
+  <span class="ico">▣</span>Investigation History
+ </button>
+
+ <div class="sidebar-bottom">
+  <div><span class="live-dot"></span><b style="font-size:11px">SYSTEM ONLINE</b></div>
+  <div class="side-small">Evidence-grounded decision support</div>
+ </div>
+</aside>
+
+<main class="main">
+
+ <div class="topbar">
+  <div>
+   <div class="eyebrow">INCIDENT INVESTIGATION / LIVE WORKSPACE</div>
+   <div class="title">Incident Command Center</div>
+  </div>
+  <div class="status"><span class="live-dot"></span><span id="apiStatus">API CONNECTING</span></div>
+ </div>
+
+ <section id="section-command" class="section">
+  <div class="hero">
+   <div class="hero-main">
+    <div class="eyebrow">EVIDENCE-GROUNDED AI DECISION SUPPORT</div>
+    <h1>Investigate before you decide.</h1>
+    <p>
+     IncidentIQ transforms incident evidence into competing hypotheses,
+     uncertainty-aware reasoning, discriminating checks and a human-controlled
+     decision gate. The system assists investigation rather than declaring
+     unsupported root causes.
+    </p>
+    <div class="actions">
+     <button class="btn primary" onclick="scrollToSection('section-evidence')">Start Investigation →</button>
+     <button class="btn" onclick="loadDemo()">Load Demo Incident</button>
+    </div>
+   </div>
+
+   <div class="hero-side">
+    <div class="metric">
+     <div class="metric-label">CURRENT MODE</div>
+     <div class="metric-value">Human + AI</div>
+    </div>
+    <div class="metric">
+     <div class="metric-label">CONTROL</div>
+     <div class="metric-value">Human Gate</div>
+    </div>
+    <div class="metric">
+     <div class="metric-label">REASONING STYLE</div>
+     <div class="metric-value">Evidence First</div>
+    </div>
+   </div>
+  </div>
+
+  <div class="stats">
+   <div class="stat">
+    <div class="stat-label">INVESTIGATIONS</div>
+    <div class="stat-value" id="investigationCount">0</div>
+    <div class="stat-note">local sessions</div>
+   </div>
+   <div class="stat">
+    <div class="stat-label">EVIDENCE ITEMS</div>
+    <div class="stat-value" id="evidenceCount">0</div>
+    <div class="stat-note">current incident</div>
+   </div>
+   <div class="stat">
+    <div class="stat-label">HYPOTHESES</div>
+    <div class="stat-value" id="hypothesisCount">0</div>
+    <div class="stat-note">competing explanations</div>
+   </div>
+   <div class="stat">
+    <div class="stat-label">API STATUS</div>
+    <div class="stat-value" id="apiMetric">—</div>
+    <div class="stat-note">localhost:8080</div>
+   </div>
+   <div class="stat">
+    <div class="stat-label">NLI ENGINE</div>
+    <div class="stat-value" id="nliMetric">—</div>
+    <div class="stat-note">runtime availability</div>
+   </div>
+  </div>
+ </section>
+
+ <section id="section-evidence" class="section">
+  <div class="section-head">
+   <div class="section-title">◉ Evidence Intelligence</div>
+   <div class="section-tag">TELEMETRY → STRUCTURED EVIDENCE</div>
+  </div>
+
+  <div class="grid2">
+   <div class="card">
+    <div class="card-head">
+     <div>
+      <div class="card-title">Evidence Intake</div>
+      <div class="card-sub">One observation per line</div>
+     </div>
+     <span class="badge">INPUT</span>
+    </div>
+
+    <textarea id="evidenceInput" placeholder="Example:
+Checkoutservice CPU utilization increased significantly.
+Disk I/O activity increased after the incident began.
+Error-like message frequency increased.
+Checkout request latency increased.
+Payment requests are timing out intermittently."></textarea>
+
+    <div class="actions">
+     <button class="btn primary" onclick="analyzeIncident()">Analyze Incident</button>
+     <button class="btn" onclick="loadDemo()">Demo Evidence</button>
+     <button class="btn danger" onclick="clearIncident()">Clear</button>
+    </div>
+
+    <div style="margin-top:14px">
+     <div class="card-sub" style="margin-bottom:7px">RUNTIME RESPONSE</div>
+     <div class="codebox" id="rawResponse">Waiting for analysis...</div>
+    </div>
+   </div>
+
+   <div class="card">
+    <div class="card-head">
+     <div>
+      <div class="card-title">Evidence Stream</div>
+      <div class="card-sub">Structured observations</div>
+     </div>
+     <span class="badge" id="evidenceBadge">0 ITEMS</span>
+    </div>
+    <div id="evidenceList" class="evidence-list">
+     <div class="empty">No evidence loaded yet.</div>
+    </div>
+   </div>
+  </div>
+ </section>
+
+ <section id="section-hypotheses" class="section">
+  <div class="section-head">
+   <div class="section-title">◇ Hypothesis Engine</div>
+   <div class="section-tag">COMPETING EXPLANATIONS</div>
+  </div>
+
+  <div class="card">
+   <div class="card-head">
+    <div>
+     <div class="card-title">Hypothesis Intelligence</div>
+     <div class="card-sub">Evidence support, uncertainty and discriminating checks</div>
+    </div>
+    <span class="badge" id="hypBadge">0 HYPOTHESES</span>
+   </div>
+
+   <div id="hypothesisList" class="hyp-list">
+    <div class="empty">Run an investigation to generate competing hypotheses.</div>
+   </div>
+  </div>
+ </section>
+
+ <section id="section-decision" class="section">
+  <div class="section-head">
+   <div class="section-title">⚖ Decision Gate</div>
+   <div class="section-tag">HUMAN CONTROL REQUIRED</div>
+  </div>
+
+  <div class="grid2">
+   <div class="card">
+    <div class="card-head">
+     <div>
+      <div class="card-title">AI Decision Engine</div>
+      <div class="card-sub">Recommendation based on current evidence</div>
+     </div>
+     <span class="badge">DECISION SUPPORT</span>
+    </div>
+
+    <div class="decision-box">
+     <div class="decision-state" id="decisionState">AWAITING EVIDENCE</div>
+     <div class="decision-text" id="decisionText">No decision generated.</div>
+     <div class="decision-note" id="decisionNote">
+      IncidentIQ will avoid selecting a weak hypothesis when the current evidence
+      does not meet the baseline selection threshold.
+     </div>
+    </div>
+   </div>
+
+   <div class="card">
+    <div class="card-head">
+     <div>
+      <div class="card-title">Recommended Verification</div>
+      <div class="card-sub">Next discriminating diagnostic actions</div>
+     </div>
+    </div>
+    <div id="checks">
+     <div class="empty">No verification checks available.</div>
+    </div>
+   </div>
+  </div>
+ </section>
+
+ <section id="section-nli" class="section">
+  <div class="section-head">
+   <div class="section-title">◎ NLI Laboratory</div>
+   <div class="section-tag">EVIDENCE ↔ HYPOTHESIS</div>
+  </div>
+
+  <div class="card">
+   <div class="card-head">
+    <div>
+     <div class="card-title">Natural Language Inference</div>
+     <div class="card-sub">Test the relationship between an evidence statement and a hypothesis</div>
+    </div>
+    <span class="badge" id="nliBadge">READY</span>
+   </div>
+
+   <div class="nli-form">
+    <div>
+     <div class="card-sub" style="margin-bottom:6px">EVIDENCE</div>
+     <input id="nliEvidence" class="input" value="Checkoutservice CPU utilization increased significantly.">
+    </div>
+    <div>
+     <div class="card-sub" style="margin-bottom:6px">HYPOTHESIS</div>
+     <input id="nliHypothesis" class="input" value="checkoutservice is experiencing resource saturation.">
+    </div>
+   </div>
+
+   <div class="actions">
+    <button class="btn primary" onclick="runNLI()">Run NLI Analysis</button>
+   </div>
+
+   <div class="nli-result">
+    <div class="nli-value">
+     <b>RELATION</b>
+     <span id="nliRelation">—</span>
+    </div>
+    <div class="nli-value">
+     <b>SCORE</b>
+     <span id="nliScore">—</span>
+    </div>
+    <div class="nli-value">
+     <b>ENGINE</b>
+     <span id="nliEngine">Checking...</span>
+    </div>
+   </div>
+  </div>
+ </section>
+
+ <section id="section-history" class="section">
+  <div class="section-head">
+   <div class="section-title">▣ Investigation History</div>
+   <div class="section-tag">LOCAL SESSION LOG</div>
+  </div>
+
+  <div class="card">
+   <div class="card-head">
+    <div>
+     <div class="card-title">Previous Investigations</div>
+     <div class="card-sub">Stored locally in this browser</div>
+    </div>
+    <button class="btn danger" onclick="clearHistory()">Clear History</button>
+   </div>
+
+   <div id="historyList" class="history">
+    <div class="empty">No investigations recorded yet.</div>
+   </div>
+  </div>
+ </section>
+
+ <!-- INCIDENTIQ PLACEMENT UPGRADE -->
+<section id="section-intelligence-upgrade" class="section">
+ <div class="section-head">
+  <div class="section-title">◆ Investigation Intelligence</div>
+  <div class="section-tag">PLACEMENT DEMO VIEW</div>
+ </div>
+
+ <div class="upgrade-grid">
+  <div class="upgrade-panel">
+   <div class="upgrade-title">Incident Timeline</div>
+   <div class="upgrade-sub">Evidence and reasoning progression</div>
+   <div id="upgradeTimeline" class="timeline">
+    <div class="t-event"><div class="t-time">T+00:00</div><div class="t-text">Waiting for incident evidence.</div></div>
+    <div class="t-event"><div class="t-time">T+00:01</div><div class="t-text">IncidentIQ will structure incoming observations.</div></div>
+   </div>
+  </div>
+
+  <div class="upgrade-panel">
+   <div class="upgrade-title">Evidence Quality</div>
+   <div class="upgrade-sub">Current evidence readiness</div>
+   <div class="quality">
+    <div class="quality-ring" id="qualityRing"><span id="qualityValue">0%</span></div>
+    <div>
+     <div class="quality-label" id="qualityLabel">Awaiting evidence</div>
+     <div class="quality-note" id="qualityNote">Add incident observations to evaluate evidence readiness.</div>
+    </div>
+   </div>
+   <div class="signal-list">
+    <div class="signal info"><span>Evidence available</span><b id="sigEvidence">—</b></div>
+    <div class="signal info"><span>Temporal context</span><b id="sigTime">—</b></div>
+    <div class="signal warn"><span>Human verification</span><b>REQUIRED</b></div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section id="section-explainability" class="section">
+ <div class="section-head">
+  <div class="section-title">◆ Explainability Center</div>
+  <div class="section-tag">WHY THIS RESULT?</div>
+ </div>
+ <div class="card">
+  <div class="card-head">
+   <div>
+    <div class="card-title">Reasoning Summary</div>
+    <div class="card-sub">Transparent interpretation of the current investigation</div>
+   </div>
+   <span class="badge">EXPLAINABLE</span>
+  </div>
+  <div id="explanationList">
+   <div class="empty">Run an investigation to see why hypotheses were generated.</div>
+  </div>
+ </div>
+</section>
+
+<section id="section-research" class="section">
+ <div class="section-head">
+  <div class="section-title">◆ Research Validation</div>
+  <div class="section-tag">ML • NLP • RCAEVAL</div>
+ </div>
+
+ <div class="card">
+  <div class="research-grid">
+   <div class="research-stat"><b>PARTICIPANTS</b><strong>27</strong><small>participant-grouped evaluation</small></div>
+   <div class="research-stat"><b>TRIALS</b><strong>135</strong><small>5 trials per participant</small></div>
+   <div class="research-stat"><b>GROUPKFOLD</b><strong>5</strong><small>cross-validation splits</small></div>
+   <div class="research-stat"><b>RCAEVAL</b><strong>3</strong><small>real cases executed locally</small></div>
+  </div>
+
+  <div class="upgrade-grid">
+   <div>
+    <div class="upgrade-title" style="margin-top:18px">ML Exploratory Results</div>
+    <div class="signal-list">
+     <div class="signal"><span>Pre-decision Logistic Regression</span><b>ROC-AUC 0.479</b></div>
+     <div class="signal"><span>Pre-decision Random Forest</span><b>ROC-AUC 0.536</b></div>
+     <div class="signal"><span>Post-decision Logistic Regression</span><b>ROC-AUC 0.538</b></div>
+     <div class="signal"><span>Post-decision Random Forest</span><b>ROC-AUC 0.558</b></div>
+    </div>
+   </div>
+
+   <div>
+    <div class="upgrade-title" style="margin-top:18px">Validation Coverage</div>
+    <div class="signal-list">
+     <div class="signal ok"><span>Ground-truth leakage protection</span><b>ENABLED</b></div>
+     <div class="signal ok"><span>Real telemetry executed</span><b>3 CASES</b></div>
+     <div class="signal warn"><span>Unavailable telemetry</span><b>6 CASES</b></div>
+     <div class="signal info"><span>NLI diagnostic improvement</span><b>NOT VERIFIED</b></div>
+    </div>
+   </div>
+  </div>
+
+  <div class="placement-note">
+   Research interpretation: ML results are exploratory and participant-grouped.
+   They are not presented as causal evidence or as a deployable predictive RCA model.
+   RCAEval coverage is reported honestly based on available local telemetry.
+  </div>
+ </div>
+</section>
+
+<script id="incidentiq-upgrade-js">
+(function(){
+ const originalRenderAnalysis=window.renderAnalysis;
+
+ window.renderAnalysis=function(data){
+  if(typeof originalRenderAnalysis==="function") originalRenderAnalysis(data);
+  try{
+   const evidence=window.state?.evidence||[];
+   const root=data?.hypotheses||{};
+   const hyps=root.hypotheses||[];
+   const decision=data?.decision||{};
+
+   const score=Math.min(100,Math.round(
+    (Math.min(evidence.length,5)/5)*55+
+    (evidence.some(e=>e.direction)?20:0)+
+    (evidence.some(e=>e.time_context)?15:0)+
+    (evidence.length>=2?10:0)
+   ));
+
+   const ring=document.getElementById("qualityRing");
+   const val=document.getElementById("qualityValue");
+   const label=document.getElementById("qualityLabel");
+   const note=document.getElementById("qualityNote");
+
+   if(ring){
+    ring.style.background="conic-gradient(#6ea8ff "+(score*3.6)+"deg,#182536 "+(score*3.6)+"deg)";
+   }
+   if(val) val.textContent=score+"%";
+   if(label) label.textContent=score>=80?"Strong evidence set":score>=55?"Usable evidence":"Limited evidence";
+   if(note) note.textContent=evidence.length+" structured observation(s) available for reasoning.";
+
+   const se=document.getElementById("sigEvidence");
+   const st=document.getElementById("sigTime");
+   if(se) se.textContent=evidence.length+" ITEMS";
+   if(st) st.textContent=evidence.some(e=>e.time_context)?"AVAILABLE":"LIMITED";
+
+   const timeline=document.getElementById("upgradeTimeline");
+   if(timeline){
+    const events=[
+     ["T+00:00","Incident evidence received"],
+     ["T+00:01",evidence.length+" evidence item(s) structured"],
+     ["T+00:02",hyps.length+" competing hypothesis/hypotheses generated"],
+     ["T+00:03",decision.decision||"Decision support generated"],
+     ["T+00:04","Human verification gate active"]
+    ];
+    timeline.innerHTML=events.map(x=>'<div class="t-event"><div class="t-time">'+escapeHtml(x[0])+'</div><div class="t-text">'+escapeHtml(x[1])+'</div></div>').join("");
+   }
+
+   const expl=document.getElementById("explanationList");
+   if(expl){
+    if(!hyps.length){
+     expl.innerHTML='<div class="empty">No hypotheses returned.</div>';
+    }else{
+     expl.innerHTML=hyps.map(h=>{
+      const c=Math.round((Number(h.confidence)||0)*100);
+      const support=(h.supporting_evidence||[]).map(x=>x.observation).slice(0,2);
+      const missing=(h.missing_evidence||[]).map(x=>x.observation||x).slice(0,2);
+      return '<div class="explain-box">'+
+       '<div class="explain-head"><div class="explain-name">'+escapeHtml(h.hypothesis||"Unknown")+'</div><span class="explain-pill">'+c+'% CONFIDENCE</span></div>'+
+       '<div class="explain-line"><b>Why considered:</b> '+(support.length?support.map(escapeHtml).join(" • "):"No direct supporting observation reported.")+'</div>'+
+       '<div class="explain-line"><b>Uncertainty:</b> '+escapeHtml(h.uncertainty||"unknown")+'</div>'+
+       '<div class="explain-line"><b>Next check:</b> '+escapeHtml(h.next_diagnostic_action||"Further verification required.")+'</div>'+
+       (missing.length?'<div class="explain-line"><b>Missing evidence:</b> '+missing.map(escapeHtml).join(" • ")+'</div>':"")+
+       '</div>';
+     }).join("");
+    }
+   }
+  }catch(e){}
+ };
+
+ function escapeHtml(value){
+  return String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+ }
+
+ window.addEventListener("DOMContentLoaded",function(){
+  setTimeout(function(){
+   const old=window.renderAnalysis;
+   if(typeof window.state==="undefined") window.state={};
+   const count=Number(localStorage.getItem("incidentiq_count")||0);
+   const counter=document.getElementById("investigationCount");
+   if(counter) counter.textContent=count;
+  },100);
+ });
+})();
+</script><div class="footer">
+  INCIDENTIQ • EVIDENCE-GROUNDED AI DECISION SUPPORT • HUMAN REVIEW REQUIRED
+ </div>
+
+</main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const state={
+ lastResult:null,
+ evidence:[],
+ history:JSON.parse(localStorage.getItem("incidentiq_history")||"[]")
+};
+
+function $(id){return document.getElementById(id)}
+
+function toast(message){
+ const t=$("toast");
+ t.textContent=message;
+ t.classList.add("show");
+ setTimeout(()=>t.classList.remove("show"),2200);
+}
+
+function scrollToSection(id){
+ const el=$(id);
+ if(el) el.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+document.querySelectorAll(".nav[data-target]").forEach(nav=>{
+ nav.addEventListener("click",()=>{
+  document.querySelectorAll(".nav").forEach(n=>n.classList.remove("active"));
+  nav.classList.add("active");
+  scrollToSection(nav.dataset.target);
+ });
+});
+
+const observer=new IntersectionObserver(entries=>{
+ entries.forEach(entry=>{
+  if(entry.isIntersecting){
+   const id=entry.target.id;
+   document.querySelectorAll(".nav").forEach(n=>{
+    n.classList.toggle("active",n.dataset.target===id);
+   });
+  }
+ });
+},{rootMargin:"-25% 0px -65% 0px",threshold:0});
+
+document.querySelectorAll(".section").forEach(s=>observer.observe(s));
+
+function buildEvidence(){
+ const raw=$("evidenceInput").value.trim();
+ if(!raw) return [];
+ return raw.split(/\n+/)
+  .map(x=>x.trim())
+  .filter(Boolean)
+  .map((observation,i)=>({
+   evidence_id:"ui-"+(i+1),
+   source:"user",
+   service:null,
+   observation,
+   signal:"observation",
+   direction:detectDirection(observation),
+   magnitude:null,
+   time_context:"incident window",
+   evidence_strength:"moderate",
+   availability:"available"
+  }));
+}
+
+function detectDirection(text){
+ const t=text.toLowerCase();
+ if(/increased|increase|higher|high|spike|elevated|rising|rose|grew|timeout/.test(t)) return "increase";
+ if(/decreased|decrease|lower|low|fall|fell|dropped|reduced/.test(t)) return "decrease";
+ if(/normal|unchanged|stable|remained/.test(t)) return "stable";
+ return null;
+}
+
+function renderEvidence(items){
+ $("evidenceCount").textContent=items.length;
+ $("evidenceBadge").textContent=items.length+" ITEMS";
+
+ if(!items.length){
+  $("evidenceList").innerHTML='<div class="empty">No evidence loaded yet.</div>';
+  return;
+ }
+
+ $("evidenceList").innerHTML=items.map((e,i)=>`
+  <div class="evidence-item">
+   <div class="ev-num">${i+1}</div>
+   <div>
+    <div class="ev-text">${escapeHtml(e.observation)}</div>
+    <div class="ev-meta">source: ${escapeHtml(e.source||"unknown")} • direction: ${escapeHtml(e.direction||"unknown")}</div>
+   </div>
+   <span class="badge">${escapeHtml(e.evidence_strength||"moderate")}</span>
+  </div>
+ `).join("");
+}
+
+async function analyzeIncident(){
+ const evidence=buildEvidence();
+
+ if(!evidence.length){
+  toast("Add evidence before analysis.");
+  return;
+ }
+
+ renderEvidence(evidence);
+ $("rawResponse").textContent="Analyzing...";
+ toast("Sending evidence to IncidentIQ...");
+
+ try{
+  const response=await fetch("/analyze",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({case_id:"ui-investigation",evidence})
+  });
+
+  const data=await response.json();
+  $("rawResponse").textContent=JSON.stringify(data,null,2);
+
+  if(!response.ok) throw new Error(data.error||"Analysis failed");
+
+  state.evidence=evidence;
+  state.lastResult=data;
+
+  renderAnalysis(data);
+
+  const record={
+   id:"INV-"+Date.now().toString().slice(-6),
+   time:new Date().toLocaleString(),
+   evidence:evidence.length,
+   hypotheses:data.hypotheses?.hypotheses?.length||0,
+   decision:data.decision?.decision||"No decision"
+  };
+
+  state.history.unshift(record);
+  state.history=state.history.slice(0,10);
+  localStorage.setItem("incidentiq_history",JSON.stringify(state.history));
+  renderHistory();
+
+  const count=Number(localStorage.getItem("incidentiq_count")||0)+1;
+  localStorage.setItem("incidentiq_count",count);
+  $("investigationCount").textContent=count;
+
+  toast("Investigation completed.");
+  scrollToSection("section-hypotheses");
+
+ }catch(err){
+  $("rawResponse").textContent=String(err);
+  toast("Analysis error: "+err.message);
+ }
+}
+
+function renderAnalysis(data){
+ const root=data.hypotheses||{};
+ const hyps=root.hypotheses||[];
+ const decision=data.decision||{};
+
+ $("hypothesisCount").textContent=hyps.length;
+ $("hypBadge").textContent=hyps.length+" HYPOTHESES";
+
+ renderHypotheses(hyps);
+
+ const decisionText=decision.decision||root.decision||"No decision generated.";
+ $("decisionText").textContent=decisionText;
+
+ if(decision.selected_hypothesis){
+  $("decisionState").textContent="CANDIDATE SELECTED";
+ }else if(hyps.length){
+  $("decisionState").textContent="VERIFICATION REQUIRED";
+ }else{
+  $("decisionState").textContent="AWAITING EVIDENCE";
+ }
+
+ $("decisionNote").textContent=
+  decision.rationale||
+  (root.notes||[]).join(" ")||
+  "Human review is required before operational action.";
+
+ const checks=[];
+ hyps.forEach(h=>{
+  (h.discriminating_checks||[]).forEach(c=>{
+   if(c && c.check && !checks.some(x=>x===c.check)) checks.push(c.check);
+  });
+ });
+
+ $("checks").innerHTML=checks.length
+  ?checks.slice(0,5).map((c,i)=>`<div class="check"><b>${i+1}.</b> ${escapeHtml(c)}</div>`).join("")
+  :'<div class="empty">No discriminating checks available.</div>';
+}
+
+function renderHypotheses(hyps){
+ if(!hyps.length){
+  $("hypothesisList").innerHTML='<div class="empty">No hypotheses returned.</div>';
+  return;
+ }
+
+ $("hypothesisList").innerHTML=hyps.map(h=>{
+  const confidence=Math.max(0,Math.min(1,Number(h.confidence)||0));
+  const support=(h.supporting_evidence||[]).length;
+  const contradict=(h.contradicting_evidence||[]).length;
+  const neutral=(h.neutral_evidence||[]).length;
+
+  return `
+   <div class="hyp">
+    <div class="hyp-top">
+     <div class="hyp-name">${escapeHtml(h.hypothesis||"Unknown hypothesis")}</div>
+     <div class="conf">${Math.round(confidence*100)}%</div>
+    </div>
+    <div class="bar"><span style="width:${Math.round(confidence*100)}%"></span></div>
+    <div class="hyp-detail">
+     uncertainty: <b>${escapeHtml(h.uncertainty||"unknown")}</b>
+     • supporting: ${support}
+     • contradicting: ${contradict}
+     • neutral: ${neutral}
+    </div>
+    ${
+     h.next_diagnostic_action
+      ?`<div class="check"><b>Next check:</b> ${escapeHtml(h.next_diagnostic_action)}</div>`
+      :""
+    }
+   </div>
+  `;
+ }).join("");
+}
+
+async function runNLI(){
+ const evidence=$("nliEvidence").value.trim();
+ const hypothesis=$("nliHypothesis").value.trim();
+
+ if(!evidence||!hypothesis){
+  toast("Enter both evidence and hypothesis.");
+  return;
+ }
+
+ $("nliRelation").textContent="RUNNING...";
+ $("nliScore").textContent="...";
+ $("nliEngine").textContent="Processing";
+
+ try{
+  const response=await fetch("/nli",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({evidence,hypothesis})
+  });
+
+  const data=await response.json();
+
+  if(!response.ok) throw new Error(data.error||"NLI failed");
+
+  $("nliRelation").textContent=data.relation||"unknown";
+  $("nliScore").textContent=
+   typeof data.score==="number"?data.score.toFixed(4):"—";
+  $("nliEngine").textContent="ONLINE";
+  $("nliBadge").textContent="RESULT READY";
+
+  toast("NLI analysis completed.");
+ }catch(err){
+  $("nliRelation").textContent="UNAVAILABLE";
+  $("nliScore").textContent="—";
+  $("nliEngine").textContent="ERROR";
+  $("nliBadge").textContent="ERROR";
+  toast("NLI error: "+err.message);
+ }
+}
+
+async function health(){
+ try{
+  const response=await fetch("/health",{cache:"no-store"});
+  const data=await response.json();
+
+  if(response.ok){
+   $("apiStatus").textContent="API ONLINE";
+   $("apiMetric").textContent="ONLINE";
+   $("nliMetric").textContent=data.nlp_available?"READY":"OFF";
+   $("nliEngine").textContent=data.nlp_available?"ONLINE":"OFFLINE";
+  }else{
+   throw new Error();
+  }
+ }catch(e){
+  $("apiStatus").textContent="API OFFLINE";
+  $("apiMetric").textContent="OFFLINE";
+  $("nliMetric").textContent="—";
+  $("nliEngine").textContent="OFFLINE";
+ }
+}
+
+function loadDemo(){
+ $("evidenceInput").value=
+`Checkoutservice CPU utilization increased significantly after the incident began.
+Disk I/O activity increased after the incident began.
+Error-like message frequency increased during the incident window.
+Checkout request latency increased significantly.
+Payment requests are timing out intermittently.`;
+
+ renderEvidence(buildEvidence());
+ toast("Demo incident loaded.");
+ scrollToSection("section-evidence");
+}
+
+function clearIncident(){
+ $("evidenceInput").value="";
+ $("rawResponse").textContent="Waiting for analysis...";
+ $("evidenceList").innerHTML='<div class="empty">No evidence loaded yet.</div>';
+ $("hypothesisList").innerHTML='<div class="empty">Run an investigation to generate competing hypotheses.</div>';
+ $("checks").innerHTML='<div class="empty">No verification checks available.</div>';
+ $("decisionState").textContent="AWAITING EVIDENCE";
+ $("decisionText").textContent="No decision generated.";
+ $("decisionNote").textContent="IncidentIQ will avoid selecting a weak hypothesis when the current evidence does not meet the baseline selection threshold.";
+ $("evidenceCount").textContent="0";
+ $("hypothesisCount").textContent="0";
+ $("evidenceBadge").textContent="0 ITEMS";
+ $("hypBadge").textContent="0 HYPOTHESES";
+ toast("Investigation cleared.");
+}
+
+function renderHistory(){
+ const list=$("historyList");
+
+ if(!state.history.length){
+  list.innerHTML='<div class="empty">No investigations recorded yet.</div>';
+  return;
+ }
+
+ list.innerHTML=state.history.map(x=>`
+  <div class="history-item">
+   <div class="history-main">
+    <b>${escapeHtml(x.id)}</b>
+    <div class="history-time">${escapeHtml(x.time)}</div>
+   </div>
+   <div class="history-time">
+    ${x.evidence} evidence • ${x.hypotheses} hypotheses
+   </div>
+  </div>
+ `).join("");
+}
+
+function clearHistory(){
+ state.history=[];
+ localStorage.removeItem("incidentiq_history");
+ renderHistory();
+ toast("History cleared.");
+}
+
+function escapeHtml(value){
+ return String(value??"")
+  .replaceAll("&","&amp;")
+  .replaceAll("<","&lt;")
+  .replaceAll(">","&gt;")
+  .replaceAll('"',"&quot;")
+  .replaceAll("'","&#039;");
+}
+
+$("investigationCount").textContent=
+ localStorage.getItem("incidentiq_count")||"0";
+
+renderHistory();
+health();
+setInterval(health,5000);
+</script>
+</body>
+</html>
+
