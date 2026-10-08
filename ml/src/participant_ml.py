@@ -12,12 +12,13 @@ from sklearn.metrics import (
     confusion_matrix,
 )
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GroupKFold
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
 INPUT = ROOT / "ml" / "results" / "participant_analysis.csv"
 OUTPUT = ROOT / "ml" / "results" / "participant_ml_metrics.csv"
 CM_OUTPUT = ROOT / "ml" / "results" / "participant_confusion_matrix.csv"
@@ -32,10 +33,28 @@ def main():
 
     df = pd.read_csv(INPUT)
 
-    if "diagnosis_correct" not in df.columns:
-        raise ValueError("diagnosis_correct column is missing.")
+    required = {
+        "participantId",
+        "diagnosis_correct",
+        "condition",
+        "caseId",
+    }
 
-    df = df.dropna(subset=["diagnosis_correct", "participantId"])
+    missing = required - set(df.columns)
+
+    if missing:
+        raise ValueError(
+            f"Required ML columns are missing: {sorted(missing)}"
+        )
+
+    df = df.dropna(
+        subset=[
+            "diagnosis_correct",
+            "participantId",
+            "condition",
+            "caseId",
+        ]
+    )
 
     if df["diagnosis_correct"].nunique() < 2:
         print("Not enough target classes for classification.")
@@ -43,19 +62,19 @@ def main():
         return
 
     y = df["diagnosis_correct"].astype(int)
+
+    # Participant ID is used ONLY for grouped cross-validation.
+    # It is never included in X.
     groups = df["participantId"]
 
     feature_candidates = [
         "condition",
-        "confidence",
-        "workload",
-        "elapsedSeconds",
-        "aiFollowed",
-        "aiOverridden",
+        "caseId",
     ]
 
     features = [
-        column for column in feature_candidates
+        column
+        for column in feature_candidates
         if column in df.columns
     ]
 
@@ -64,64 +83,22 @@ def main():
 
     X = df[features].copy()
 
-    numeric_features = [
-        column for column in [
-            "confidence",
-            "workload",
-            "elapsedSeconds",
-        ]
-        if column in X.columns
-    ]
-
     categorical_features = [
-        column for column in ["condition"]
+        column
+        for column in ["condition", "caseId"]
         if column in X.columns
     ]
 
-    boolean_features = [
-        column for column in ["aiFollowed", "aiOverridden"]
-        if column in X.columns
-    ]
-
-    for column in boolean_features:
-        X[column] = (
-            X[column]
-            .astype(str)
-            .str.lower()
-            .map({
-                "true": 1,
-                "false": 0,
-                "1": 1,
-                "0": 0,
-                "yes": 1,
-                "no": 0,
-            })
-        )
-
-    numeric_features.extend(boolean_features)
-
-    transformers = []
-
-    if numeric_features:
-        transformers.append(
-            (
-                "numeric",
-                Pipeline([
-                    ("imputer", SimpleImputer(strategy="median")),
-                    ("scaler", StandardScaler()),
-                ]),
-                numeric_features,
-            )
-        )
-
-    if categorical_features:
-        transformers.append(
+    preprocessor = ColumnTransformer(
+        transformers=[
             (
                 "categorical",
                 Pipeline([
                     (
                         "imputer",
-                        SimpleImputer(strategy="most_frequent"),
+                        SimpleImputer(
+                            strategy="most_frequent"
+                        ),
                     ),
                     (
                         "onehot",
@@ -132,15 +109,13 @@ def main():
                 ]),
                 categorical_features,
             )
-        )
-
-    preprocessor = ColumnTransformer(
-        transformers=transformers
+        ]
     )
 
     models = {
         "logistic_regression": LogisticRegression(
-            max_iter=2000
+            max_iter=2000,
+            class_weight="balanced",
         ),
         "random_forest": RandomForestClassifier(
             n_estimators=200,
@@ -157,38 +132,59 @@ def main():
 
     n_splits = min(5, unique_groups)
 
-    cv = GroupKFold(n_splits=n_splits)
+    cv = GroupKFold(
+        n_splits=n_splits
+    )
 
     results = []
-    confusion_total = None
+    confusion_by_model = {}
 
     for model_name, model in models.items():
 
         fold_metrics = []
+        confusion_total = None
 
         for fold, (train_idx, test_idx) in enumerate(
-            cv.split(X, y, groups=groups),
+            cv.split(
+                X,
+                y,
+                groups=groups,
+            ),
             start=1,
         ):
+
             X_train = X.iloc[train_idx]
             X_test = X.iloc[test_idx]
+
             y_train = y.iloc[train_idx]
             y_test = y.iloc[test_idx]
 
             pipeline = Pipeline([
-                ("preprocessor", preprocessor),
-                ("model", model),
+                (
+                    "preprocessor",
+                    preprocessor,
+                ),
+                (
+                    "model",
+                    model,
+                ),
             ])
 
-            pipeline.fit(X_train, y_train)
+            pipeline.fit(
+                X_train,
+                y_train,
+            )
 
-            predictions = pipeline.predict(X_test)
+            predictions = pipeline.predict(
+                X_test
+            )
 
             fold_metrics.append({
                 "model": model_name,
                 "fold": fold,
                 "accuracy": accuracy_score(
-                    y_test, predictions
+                    y_test,
+                    predictions,
                 ),
                 "precision": precision_score(
                     y_test,
@@ -218,24 +214,70 @@ def main():
             else:
                 confusion_total += cm
 
-        results.extend(fold_metrics)
+        results.extend(
+            fold_metrics
+        )
 
-    metrics_df = pd.DataFrame(results)
-    metrics_df.to_csv(OUTPUT, index=False)
+        confusion_by_model[
+            model_name
+        ] = confusion_total
 
-    cm_df = pd.DataFrame(
-        confusion_total,
-        index=["actual_incorrect", "actual_correct"],
-        columns=["predicted_incorrect", "predicted_correct"],
+    metrics_df = pd.DataFrame(
+        results
     )
 
-    cm_df.to_csv(CM_OUTPUT)
+    metrics_df.to_csv(
+        OUTPUT,
+        index=False,
+    )
 
-    print(f"Metrics output: {OUTPUT}")
-    print(f"Confusion matrix output: {CM_OUTPUT}")
-    print(f"Participants: {unique_groups}")
-    print(f"Trials: {len(df)}")
-    print(f"GroupKFold splits: {n_splits}")
+    confusion_rows = []
+
+    for model_name, cm in confusion_by_model.items():
+
+        confusion_rows.extend([
+            {
+                "model": model_name,
+                "actual": "incorrect",
+                "predicted_incorrect": int(cm[0, 0]),
+                "predicted_correct": int(cm[0, 1]),
+            },
+            {
+                "model": model_name,
+                "actual": "correct",
+                "predicted_incorrect": int(cm[1, 0]),
+                "predicted_correct": int(cm[1, 1]),
+            },
+        ])
+
+    cm_df = pd.DataFrame(
+        confusion_rows
+    )
+
+    cm_df.to_csv(
+        CM_OUTPUT,
+        index=False,
+    )
+
+    print(
+        f"Metrics output: {OUTPUT}"
+    )
+    print(
+        f"Confusion matrix output: {CM_OUTPUT}"
+    )
+    print(
+        f"Participants: {unique_groups}"
+    )
+    print(
+        f"Trials: {len(df)}"
+    )
+    print(
+        f"GroupKFold splits: {n_splits}"
+    )
+    print(
+        f"ML features: {features}"
+    )
+    print()
     print(metrics_df)
 
 
