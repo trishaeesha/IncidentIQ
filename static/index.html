@@ -562,6 +562,43 @@ textarea:focus{border-color:#38679c;box-shadow:0 0 0 3px rgba(70,130,220,.08)}
 .placement-note{margin-top:10px;padding:10px;border-left:2px solid #6ea8ff;background:#09111c;color:#78879c;font-size:10px;line-height:1.5}
 @media(max-width:900px){.upgrade-grid{grid-template-columns:1fr}.research-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.research-grid{grid-template-columns:1fr}}
+</style><style id="incidentiq-upgrade-css">
+.upgrade-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;margin-top:18px}
+.upgrade-panel{background:linear-gradient(145deg,#0b111b,#080d15);border:1px solid #1d2a3b;border-radius:16px;padding:20px}
+.upgrade-title{font-size:12px;font-weight:800;margin-bottom:5px}
+.upgrade-sub{font-size:10px;color:#647287;margin-bottom:15px}
+.timeline{position:relative;padding-left:25px}
+.timeline:before{content:"";position:absolute;left:7px;top:4px;bottom:4px;width:1px;background:#26384e}
+.t-event{position:relative;padding:0 0 15px 12px}
+.t-event:before{content:"";position:absolute;left:-21px;top:4px;width:8px;height:8px;border-radius:50%;background:#6ea8ff;box-shadow:0 0 10px rgba(110,168,255,.4)}
+.t-time{font-size:9px;color:#62748c;letter-spacing:.5px}
+.t-text{font-size:11px;margin-top:3px;color:#d5dfed}
+.quality{display:flex;align-items:center;gap:15px}
+.quality-ring{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#6ea8ff 0deg,#6ea8ff 295deg,#182536 295deg);position:relative}
+.quality-ring:after{content:"";position:absolute;inset:7px;border-radius:50%;background:#0a1019}
+.quality-ring span{position:relative;z-index:2;font-size:15px;font-weight:800}
+.quality-label{font-size:12px;font-weight:800}
+.quality-note{font-size:10px;color:#6c7b90;margin-top:5px;line-height:1.5}
+.signal-list{display:grid;gap:7px;margin-top:15px}
+.signal{display:flex;justify-content:space-between;align-items:center;padding:9px 10px;background:#080d15;border:1px solid #172435;border-radius:8px;font-size:10px}
+.signal b{font-size:9px}
+.signal.ok b{color:#62d99c}.signal.warn b{color:#f0c968}.signal.info b{color:#7eaff4}
+.research-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.research-stat{background:#080d15;border:1px solid #19283a;border-radius:10px;padding:13px}
+.research-stat b{display:block;font-size:8px;color:#65748a;letter-spacing:1px}
+.research-stat strong{display:block;font-size:19px;margin-top:6px}
+.research-stat small{display:block;font-size:9px;color:#59697e;margin-top:3px}
+.explain-box{background:#080d15;border:1px solid #19283a;border-radius:10px;padding:14px;margin-top:10px}
+.explain-head{display:flex;justify-content:space-between;align-items:center}
+.explain-name{font-size:12px;font-weight:800}
+.explain-line{font-size:10px;color:#8593a7;line-height:1.5;margin-top:8px}
+.explain-pill{font-size:8px;padding:4px 7px;border-radius:10px;border:1px solid #31506e;color:#83b7fa}
+.gate-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.gate-btn{border:1px solid #263a52;background:#0d1622;color:#dbe7f7;border-radius:8px;padding:8px 11px;font-size:10px}
+.gate-btn:hover{border-color:#4875a8;background:#132235}
+.placement-note{margin-top:10px;padding:10px;border-left:2px solid #6ea8ff;background:#09111c;color:#78879c;font-size:10px;line-height:1.5}
+@media(max-width:900px){.upgrade-grid{grid-template-columns:1fr}.research-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.research-grid{grid-template-columns:1fr}}
 </style></head>
 
 <body>
@@ -862,6 +899,189 @@ Payment requests are timing out intermittently."></textarea>
  </section>
 
  <!-- INCIDENTIQ PLACEMENT UPGRADE -->
+<section id="section-intelligence-upgrade" class="section">
+ <div class="section-head">
+  <div class="section-title">◆ Investigation Intelligence</div>
+  <div class="section-tag">PLACEMENT DEMO VIEW</div>
+ </div>
+
+ <div class="upgrade-grid">
+  <div class="upgrade-panel">
+   <div class="upgrade-title">Incident Timeline</div>
+   <div class="upgrade-sub">Evidence and reasoning progression</div>
+   <div id="upgradeTimeline" class="timeline">
+    <div class="t-event"><div class="t-time">T+00:00</div><div class="t-text">Waiting for incident evidence.</div></div>
+    <div class="t-event"><div class="t-time">T+00:01</div><div class="t-text">IncidentIQ will structure incoming observations.</div></div>
+   </div>
+  </div>
+
+  <div class="upgrade-panel">
+   <div class="upgrade-title">Evidence Quality</div>
+   <div class="upgrade-sub">Current evidence readiness</div>
+   <div class="quality">
+    <div class="quality-ring" id="qualityRing"><span id="qualityValue">0%</span></div>
+    <div>
+     <div class="quality-label" id="qualityLabel">Awaiting evidence</div>
+     <div class="quality-note" id="qualityNote">Add incident observations to evaluate evidence readiness.</div>
+    </div>
+   </div>
+   <div class="signal-list">
+    <div class="signal info"><span>Evidence available</span><b id="sigEvidence">—</b></div>
+    <div class="signal info"><span>Temporal context</span><b id="sigTime">—</b></div>
+    <div class="signal warn"><span>Human verification</span><b>REQUIRED</b></div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section id="section-explainability" class="section">
+ <div class="section-head">
+  <div class="section-title">◆ Explainability Center</div>
+  <div class="section-tag">WHY THIS RESULT?</div>
+ </div>
+ <div class="card">
+  <div class="card-head">
+   <div>
+    <div class="card-title">Reasoning Summary</div>
+    <div class="card-sub">Transparent interpretation of the current investigation</div>
+   </div>
+   <span class="badge">EXPLAINABLE</span>
+  </div>
+  <div id="explanationList">
+   <div class="empty">Run an investigation to see why hypotheses were generated.</div>
+  </div>
+ </div>
+</section>
+
+<section id="section-research" class="section">
+ <div class="section-head">
+  <div class="section-title">◆ Research Validation</div>
+  <div class="section-tag">ML • NLP • RCAEVAL</div>
+ </div>
+
+ <div class="card">
+  <div class="research-grid">
+   <div class="research-stat"><b>PARTICIPANTS</b><strong>27</strong><small>participant-grouped evaluation</small></div>
+   <div class="research-stat"><b>TRIALS</b><strong>135</strong><small>5 trials per participant</small></div>
+   <div class="research-stat"><b>GROUPKFOLD</b><strong>5</strong><small>cross-validation splits</small></div>
+   <div class="research-stat"><b>RCAEVAL</b><strong>3</strong><small>real cases executed locally</small></div>
+  </div>
+
+  <div class="upgrade-grid">
+   <div>
+    <div class="upgrade-title" style="margin-top:18px">ML Exploratory Results</div>
+    <div class="signal-list">
+     <div class="signal"><span>Pre-decision Logistic Regression</span><b>ROC-AUC 0.479</b></div>
+     <div class="signal"><span>Pre-decision Random Forest</span><b>ROC-AUC 0.536</b></div>
+     <div class="signal"><span>Post-decision Logistic Regression</span><b>ROC-AUC 0.538</b></div>
+     <div class="signal"><span>Post-decision Random Forest</span><b>ROC-AUC 0.558</b></div>
+    </div>
+   </div>
+
+   <div>
+    <div class="upgrade-title" style="margin-top:18px">Validation Coverage</div>
+    <div class="signal-list">
+     <div class="signal ok"><span>Ground-truth leakage protection</span><b>ENABLED</b></div>
+     <div class="signal ok"><span>Real telemetry executed</span><b>3 CASES</b></div>
+     <div class="signal warn"><span>Unavailable telemetry</span><b>6 CASES</b></div>
+     <div class="signal info"><span>NLI diagnostic improvement</span><b>NOT VERIFIED</b></div>
+    </div>
+   </div>
+  </div>
+
+  <div class="placement-note">
+   Research interpretation: ML results are exploratory and participant-grouped.
+   They are not presented as causal evidence or as a deployable predictive RCA model.
+   RCAEval coverage is reported honestly based on available local telemetry.
+  </div>
+ </div>
+</section>
+
+<script id="incidentiq-upgrade-js">
+(function(){
+ const originalRenderAnalysis=window.renderAnalysis;
+
+ window.renderAnalysis=function(data){
+  if(typeof originalRenderAnalysis==="function") originalRenderAnalysis(data);
+  try{
+   const evidence=window.state?.evidence||[];
+   const root=data?.hypotheses||{};
+   const hyps=root.hypotheses||[];
+   const decision=data?.decision||{};
+
+   const score=Math.min(100,Math.round(
+    (Math.min(evidence.length,5)/5)*55+
+    (evidence.some(e=>e.direction)?20:0)+
+    (evidence.some(e=>e.time_context)?15:0)+
+    (evidence.length>=2?10:0)
+   ));
+
+   const ring=document.getElementById("qualityRing");
+   const val=document.getElementById("qualityValue");
+   const label=document.getElementById("qualityLabel");
+   const note=document.getElementById("qualityNote");
+
+   if(ring){
+    ring.style.background="conic-gradient(#6ea8ff "+(score*3.6)+"deg,#182536 "+(score*3.6)+"deg)";
+   }
+   if(val) val.textContent=score+"%";
+   if(label) label.textContent=score>=80?"Strong evidence set":score>=55?"Usable evidence":"Limited evidence";
+   if(note) note.textContent=evidence.length+" structured observation(s) available for reasoning.";
+
+   const se=document.getElementById("sigEvidence");
+   const st=document.getElementById("sigTime");
+   if(se) se.textContent=evidence.length+" ITEMS";
+   if(st) st.textContent=evidence.some(e=>e.time_context)?"AVAILABLE":"LIMITED";
+
+   const timeline=document.getElementById("upgradeTimeline");
+   if(timeline){
+    const events=[
+     ["T+00:00","Incident evidence received"],
+     ["T+00:01",evidence.length+" evidence item(s) structured"],
+     ["T+00:02",hyps.length+" competing hypothesis/hypotheses generated"],
+     ["T+00:03",decision.decision||"Decision support generated"],
+     ["T+00:04","Human verification gate active"]
+    ];
+    timeline.innerHTML=events.map(x=>'<div class="t-event"><div class="t-time">'+escapeHtml(x[0])+'</div><div class="t-text">'+escapeHtml(x[1])+'</div></div>').join("");
+   }
+
+   const expl=document.getElementById("explanationList");
+   if(expl){
+    if(!hyps.length){
+     expl.innerHTML='<div class="empty">No hypotheses returned.</div>';
+    }else{
+     expl.innerHTML=hyps.map(h=>{
+      const c=Math.round((Number(h.confidence)||0)*100);
+      const support=(h.supporting_evidence||[]).map(x=>x.observation).slice(0,2);
+      const missing=(h.missing_evidence||[]).map(x=>x.observation||x).slice(0,2);
+      return '<div class="explain-box">'+
+       '<div class="explain-head"><div class="explain-name">'+escapeHtml(h.hypothesis||"Unknown")+'</div><span class="explain-pill">'+c+'% CONFIDENCE</span></div>'+
+       '<div class="explain-line"><b>Why considered:</b> '+(support.length?support.map(escapeHtml).join(" • "):"No direct supporting observation reported.")+'</div>'+
+       '<div class="explain-line"><b>Uncertainty:</b> '+escapeHtml(h.uncertainty||"unknown")+'</div>'+
+       '<div class="explain-line"><b>Next check:</b> '+escapeHtml(h.next_diagnostic_action||"Further verification required.")+'</div>'+
+       (missing.length?'<div class="explain-line"><b>Missing evidence:</b> '+missing.map(escapeHtml).join(" • ")+'</div>':"")+
+       '</div>';
+     }).join("");
+    }
+   }
+  }catch(e){}
+ };
+
+ function escapeHtml(value){
+  return String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+ }
+
+ window.addEventListener("DOMContentLoaded",function(){
+  setTimeout(function(){
+   const old=window.renderAnalysis;
+   if(typeof window.state==="undefined") window.state={};
+   const count=Number(localStorage.getItem("incidentiq_count")||0);
+   const counter=document.getElementById("investigationCount");
+   if(counter) counter.textContent=count;
+  },100);
+ });
+})();
+</script><!-- INCIDENTIQ PLACEMENT UPGRADE -->
 <section id="section-intelligence-upgrade" class="section">
  <div class="section-head">
   <div class="section-title">◆ Investigation Intelligence</div>
@@ -1408,4 +1628,5 @@ setInterval(health,5000);
 </script>
 </body>
 </html>
+
 
